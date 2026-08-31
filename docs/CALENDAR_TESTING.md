@@ -7,12 +7,15 @@ three real clients behave. Do this by hand before launch, and again whenever
 
 Export a schedule that deliberately includes:
 
-- an item at **11:59 PM** (the default) — the DST-sensitive case,
+- an item with **no stated time** — the common case, exports as all-day. Check
+  it lands on the right day, then **change your device timezone to UTC+13
+  (Auckland) and check again.** An all-day event must not move; a 23:59 timed
+  event would jump to the next day, which is the bug this design avoids.
 - an item with an **explicit time** such as a 7:30 PM exam,
 - an item on **each side of a DST transition** (early October and early December
-  for a northern-hemisphere autumn term),
-- an item with **no time at all** (clear the time in the review table) — exports
-  as all-day,
+  for a northern-hemisphere autumn term), both with stated times,
+- an item where the syllabus itself said **11:59 PM** — a real stated time, so a
+  real timed event,
 - an item with a **location**,
 - an item whose title contains a **comma, semicolon and accented characters** —
   exercises TEXT escaping,
@@ -34,6 +37,8 @@ Export a schedule that deliberately includes:
 2. Confirm the alarms came through (1 day and 2 hours before).
 3. Confirm all-day items sit on the right day and do not bleed into the next —
    the classic off-by-one when a client mishandles the exclusive `DTEND`.
+4. Confirm the two all-day alarms land at 10:00 the day before and 09:00 on the
+   day, not at midnight.
 
 ## Outlook
 

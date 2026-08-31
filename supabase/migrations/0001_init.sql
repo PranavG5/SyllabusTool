@@ -253,9 +253,10 @@ create table if not exists public.items (
   type             public.item_type not null default 'other',
   -- Null when the extractor could not resolve a date. We never guess.
   due_date         date,
+  -- Wall time in the term's zone. NULL means a day-level deadline: the
+  -- syllabus gave a date and no hour, so the item exports as an all-day event
+  -- rather than a timezone-dependent instant. We never invent a time.
   due_time         time,
-  -- True when due_time was defaulted to 23:59 rather than read from the source.
-  time_is_default  boolean not null default false,
   weight           numeric(5,2) check (weight is null or (weight >= 0 and weight <= 100)),
   location         text,
   -- Verbatim source text. Enforced non-empty: no item without a provenance.

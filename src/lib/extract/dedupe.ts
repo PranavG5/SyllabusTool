@@ -31,8 +31,9 @@ function undatedKey(item: NormalizedItem): string {
 }
 
 function merge(base: NormalizedItem, other: NormalizedItem): NormalizedItem {
-  // Prefer a real stated time over the 11:59 PM default.
-  const preferOtherTime = base.timeIsDefault && !other.timeIsDefault && other.dueTime !== null;
+  // A stated time beats no time: one document may give the hour where the
+  // other only gave the day.
+  const preferOtherTime = base.dueTime === null && other.dueTime !== null;
   const dueDate = base.dueDate ?? other.dueDate;
 
   return {
@@ -42,8 +43,7 @@ function merge(base: NormalizedItem, other: NormalizedItem): NormalizedItem {
     type: base.type === 'other' && other.type !== 'other' ? other.type : base.type,
     courseName: base.courseName ?? other.courseName,
     dueDate,
-    dueTime: preferOtherTime ? other.dueTime : (base.dueTime ?? other.dueTime),
-    timeIsDefault: preferOtherTime ? other.timeIsDefault : base.timeIsDefault,
+    dueTime: preferOtherTime ? other.dueTime : base.dueTime,
     weight: base.weight ?? other.weight,
     location: base.location ?? other.location,
     // Keep the fuller snippet: it gives the student more to verify against.

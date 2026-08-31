@@ -50,7 +50,6 @@ export type ItemRow = {
   type: ItemType;
   due_date: string | null;
   due_time: string | null;
-  time_is_default: boolean;
   weight: number | null;
   location: string | null;
   source_snippet: string;

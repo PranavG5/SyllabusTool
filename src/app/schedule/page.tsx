@@ -72,7 +72,8 @@ export default async function SchedulePage({
             <h1 className="text-2xl font-bold text-[var(--color-ink)]">{payload.term.name}</h1>
             <p className="text-[var(--color-ink-soft)]">
               {activeCount} item{activeCount === 1 ? '' : 's'} across {payload.courses.length} course
-              {payload.courses.length === 1 ? '' : 's'} · times shown in {payload.term.timezone.replace('_', ' ')}
+              {payload.courses.length === 1 ? '' : 's'} · specific times shown in{' '}
+              {payload.term.timezone.replace('_', ' ')}
             </p>
           </div>
           <Link href={`/review?termId=${payload.term.id}`} className="btn btn-secondary">

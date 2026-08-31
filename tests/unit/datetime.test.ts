@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   parseISODate, formatISODate, addDays, diffDays, dayOfWeek, parseWallTime,
   zonedWallTimeToUtc, zoneOffsetMs, toIcsUtcStamp, toIcsDateStamp,
-  startOfWeekMonday, isValidTimeZone, todayIn, DEFAULT_DUE_TIME,
+  startOfWeekMonday, isValidTimeZone, todayIn,
 } from '@/lib/datetime';
 
 describe('civil date parsing', () => {
@@ -150,11 +150,5 @@ describe('todayIn', () => {
     const now = new Date(Date.UTC(2026, 0, 1, 3, 0, 0));
     expect(todayIn('America/New_York', now)).toEqual({ year: 2025, month: 12, day: 31 });
     expect(todayIn('UTC', now)).toEqual({ year: 2026, month: 1, day: 1 });
-  });
-});
-
-describe('defaults', () => {
-  it('defaults unspecified deadlines to 11:59 PM', () => {
-    expect(DEFAULT_DUE_TIME).toBe('23:59');
   });
 });

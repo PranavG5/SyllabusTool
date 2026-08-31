@@ -71,7 +71,8 @@ self-heals without a queue service to operate.
 |---|---|---|
 | Model contract | `src/lib/extract/schema.ts` | Strict structured output. Field descriptions are the extraction spec. |
 | Never inventing a date | `src/lib/schedule/relative-dates.ts` | The model emits a structured reference; TypeScript resolves it. Unresolvable → null date, low confidence. |
-| DST | `src/lib/datetime.ts` | Civil date + wall time + IANA zone, converted at export. 11:59 PM stays 11:59 PM. |
+| Dates vs. times | `src/lib/extract/normalize.ts` | A syllabus that names a day gets an all-day event. Only a stated time becomes a timed event. See "Why most deadlines are all-day" below. |
+| DST | `src/lib/datetime.ts` | Stated times are civil date + wall time + IANA zone, converted at export, so a 7:30 PM exam stays 7:30 PM across the boundary. |
 | No duplicate calendar events | `src/lib/ics/build.ts` | UID from the row id, SEQUENCE from a DB-maintained revision counter. |
 | Quota | `supabase/migrations/0002_functions.sql` | One SQL function under a per-user advisory lock. A paid tier is a row in `plan_limits`. |
 | Tenant isolation | `supabase/migrations/0003_rls.sql` | Postgres policies plus column-level grants, not application `WHERE` clauses. |
@@ -80,7 +81,7 @@ self-heals without a queue service to operate.
 
 ```bash
 npm run db:test:up     # throwaway Postgres for the RLS suite (or set TEST_DATABASE_URL)
-npm test               # 219 tests, offline
+npm test               # 228 tests, offline
 npm run verify         # typecheck + unit + RLS
 ```
 
@@ -116,6 +117,38 @@ node scripts/check-a11y.mjs       http://localhost:3000 / /login /privacy
 
 They assert no horizontal scroll at 390 / 768 / 1280 px, and that every control
 has an accessible name and every text colour clears WCAG AA.
+
+## Why most deadlines are all-day
+
+A syllabus line like `Problem Set 4 .......... October 15` names **a day**, not a
+moment. The obvious implementation — default the time to 11:59 PM and export a
+timed event — is actively wrong, and wrong in the worst possible way:
+
+- 23:59 is one minute from midnight, so the event is *maximally* sensitive to
+  timezone. `2026-10-15 23:59` in `America/New_York` is `2026-10-16 03:59Z`.
+  A student whose phone is set to UTC, or who is on exchange in Europe, sees
+  that deadline on **October 16**.
+- The one thing this product must never get wrong is which day something is due.
+
+So a deadline with no stated time is stored with `due_time = NULL` and exported
+as an **all-day event**: a floating `DTSTART;VALUE=DATE:20261015` that carries no
+offset for any client to shift. It reads "October 15" on every device, in every
+timezone, whether or not the student travels.
+
+The timezone machinery is still there and still exercised — it applies to the
+minority of items whose syllabus *did* state a time:
+
+| Source text | Stored | Exported as |
+|---|---|---|
+| `Problem Set 4 — October 15` | `due_time` NULL | All-day event on Oct 15 |
+| `Prelim 1 — Sep 30, 7:30 PM` | `19:30` + term zone | Timed event, DST-correct |
+| `due by 11:59pm` (Canvas says this) | `23:59` + term zone | Timed event — the source stated it |
+
+A student can add a time to any row in the review table, which turns it into a
+timed event; clearing it turns it back. Reminders differ accordingly: all-day
+items fire at 10:00 the day before and 09:00 on the day (an all-day event starts
+at local midnight, so a naive `-P1D` would alarm at midnight), timed items at one
+day and two hours before.
 
 ## Cost control
 

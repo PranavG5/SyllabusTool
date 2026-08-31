@@ -428,7 +428,6 @@ async function persistItems(
         type: item.type,
         due_date: item.dueDate,
         due_time: item.dueTime,
-        time_is_default: item.timeIsDefault,
         weight: item.weight,
         location: item.location,
         source_snippet: item.sourceSnippet,

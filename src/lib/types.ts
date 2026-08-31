@@ -36,10 +36,12 @@ export interface ScheduleItem {
   type: ItemType;
   /** ISO date, or null when the extractor could not resolve one. */
   dueDate: string | null;
-  /** HH:MM wall time in the term's zone, or null when unknown. */
+  /**
+   * HH:MM wall time in the term's zone, or null for a day-level deadline.
+   * Null is the common case: most syllabi give a date and no hour, and we do
+   * not invent one. Null exports as an all-day event.
+   */
   dueTime: string | null;
-  /** True when dueTime was defaulted to 23:59 rather than read from the source. */
-  timeIsDefault: boolean;
   weight: number | null;
   location: string | null;
   sourceSnippet: string;

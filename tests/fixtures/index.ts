@@ -10,8 +10,8 @@ export interface ExpectedItem {
   type?: string;
   course: string;
   dueDate?: string;
-  dueTime?: string;
-  timeIsDefault?: boolean;
+  /** null asserts an all-day item; omitted means "do not check". */
+  dueTime?: string | null;
   weight?: number;
 }
 

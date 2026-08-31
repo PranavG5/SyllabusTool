@@ -19,7 +19,6 @@ interface DemoItem {
   course: string;
   dueDate: string | null;
   dueTime: string | null;
-  timeIsDefault: boolean;
   weight: number | null;
   location: string | null;
   sourceSnippet: string;
@@ -135,10 +134,9 @@ export function DemoPanel() {
                     <span className="font-medium text-[var(--color-ink)]">{item.title}</span>
                     <span className="text-[var(--color-ink-faint)]"> · {item.course}</span>
                   </span>
-                  {item.dueTime ? (
+                  {item.dueDate ? (
                     <span className="hint">
-                      {formatTime(item.dueTime)}
-                      {item.timeIsDefault ? ' (assumed)' : ''}
+                      {item.dueTime ? formatTime(item.dueTime) : 'All day'}
                     </span>
                   ) : null}
                   <ConfidenceBadge confidence={item.confidence} />

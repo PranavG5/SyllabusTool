@@ -68,7 +68,6 @@ export async function loadSchedule(
     dueDate: i.due_date,
     // Postgres returns `time` as HH:MM:SS; the UI works in HH:MM.
     dueTime: i.due_time ? i.due_time.slice(0, 5) : null,
-    timeIsDefault: i.time_is_default,
     weight: i.weight === null ? null : Number(i.weight),
     location: i.location,
     sourceSnippet: i.source_snippet,

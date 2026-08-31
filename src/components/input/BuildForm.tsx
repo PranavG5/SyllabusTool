@@ -265,8 +265,9 @@ export function BuildForm({
               ))}
             </select>
             <p id={`${ids.zone}-hint`} className="hint mt-1">
-              Deadlines are stored against this, so an 11:59 PM due date stays 11:59 PM even after
-              the clocks change. We detected it from your browser.
+              Used for deadlines that name a specific time, like a 7:30 PM exam, so they stay
+              correct after the clocks change. Deadlines that only name a day go in your calendar
+              as all-day items and are not affected. We detected this from your browser.
             </p>
           </div>
           <div>

@@ -98,9 +98,9 @@ function Row({ item, courses, onChange, onDelete, saving }: RowProps) {
           <div className="mt-2 flex flex-wrap items-center gap-2">
             {course ? <CourseTag code={course.code} color={course.color} size="sm" /> : null}
             <ConfidenceBadge confidence={item.confidence} />
-            {item.timeIsDefault && item.dueTime ? (
-              <span className="chip" title="The syllabus gave no time, so we used 11:59 PM.">
-                time assumed
+            {item.dueDate && !item.dueTime ? (
+              <span className="chip" title="Your syllabus gave a date but no time, so this goes in your calendar as an all-day item. Set a time if you want one.">
+                All day
               </span>
             ) : null}
             {item.weight != null ? <span className="chip">{item.weight}% of grade</span> : null}
@@ -122,7 +122,9 @@ function Row({ item, courses, onChange, onDelete, saving }: RowProps) {
             />
           </div>
           <div>
-            <label className="sr-only" htmlFor={`time-${item.id}`}>Due time</label>
+            <label className="sr-only" htmlFor={`time-${item.id}`}>
+              Due time (optional — leave blank for an all-day item)
+            </label>
             <input
               id={`time-${item.id}`}
               type="time"
@@ -130,6 +132,7 @@ function Row({ item, courses, onChange, onDelete, saving }: RowProps) {
               onChange={(e) => onChange(item.id, { dueTime: e.target.value || null })}
               disabled={saving || item.dueDate === null}
               className="field"
+              title="Leave blank for an all-day item"
             />
           </div>
           <div>

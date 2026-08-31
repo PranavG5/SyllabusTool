@@ -63,17 +63,29 @@ describe('title canonicalisation', () => {
 });
 
 describe('normalizeItem', () => {
-  it('keeps an explicit date and defaults the time to 23:59, flagged', () => {
+  it('leaves a date with no stated time as an all-day deadline', () => {
     const item = normalizeItem(raw(), CTX)!;
     expect(item.dueDate).toBe('2026-10-15');
-    expect(item.dueTime).toBe('23:59');
-    expect(item.timeIsDefault).toBe(true);
+    // Never 23:59. A syllabus that names a day names a day; inventing a time
+    // one minute before midnight makes the item timezone-dependent and can
+    // land it on the following date for anyone east of the term's zone.
+    expect(item.dueTime).toBeNull();
   });
 
-  it('keeps a stated time and does not flag it', () => {
+  it('keeps a time the syllabus actually stated', () => {
     const item = normalizeItem(raw({ due_time: '17:00' }), CTX)!;
     expect(item.dueTime).toBe('17:00');
-    expect(item.timeIsDefault).toBe(false);
+  });
+
+  it('keeps a stated 11:59 PM, because that one is real', () => {
+    // Canvas exports literally say "due by 11:59pm". When the source says it,
+    // it is a stated time and becomes a timed event.
+    const item = normalizeItem(raw({ due_time: '23:59' }), CTX)!;
+    expect(item.dueTime).toBe('23:59');
+  });
+
+  it('ignores a time the model returns in an unusable form', () => {
+    expect(normalizeItem(raw({ due_time: '25:99' }), CTX)!.dueTime).toBeNull();
   });
 
   it('resolves a week-relative reference and downgrades from high to medium', () => {
@@ -101,7 +113,6 @@ describe('normalizeItem', () => {
     expect(item.dueDate).toBeNull();
     expect(item.confidence).toBe('low');
     expect(item.unresolvedReason).toBeTruthy();
-    // No date means no defaulted time either.
     expect(item.dueTime).toBeNull();
   });
 
@@ -167,7 +178,6 @@ describe('dedupe', () => {
     expect(merged).toHaveLength(1);
     expect(merged[0]!.weight).toBe(10);
     expect(merged[0]!.dueTime).toBe('17:00');
-    expect(merged[0]!.timeIsDefault).toBe(false);
     expect(merged[0]!.location).toBe('Gates B01');
   });
 
@@ -274,5 +284,31 @@ describe('long and short spellings converge', () => {
     expect(merged).toHaveLength(1);
     expect(merged[0]!.dueTime).toBe('14:00');
     expect(merged[0]!.location).toBe('Sibley 101');
+  });
+
+  it('takes a stated time from whichever copy has one', () => {
+    const items = normalizeItems(
+      [
+        raw({ title: 'Midterm', type: 'exam', due_date: '2026-10-06' }),
+        raw({ title: 'Midterm', type: 'exam', due_date: '2026-10-06', due_time: '19:30' }),
+      ],
+      CTX,
+    );
+    const merged = dedupeItems(items);
+    expect(merged).toHaveLength(1);
+    expect(merged[0]!.dueTime).toBe('19:30');
+  });
+
+  it('leaves a merged item all-day when neither copy stated a time', () => {
+    const items = normalizeItems(
+      [
+        raw({ title: 'Essay', due_date: '2026-11-02' }),
+        raw({ title: 'Essay', due_date: '2026-11-02', source_snippet: 'Essay — Nov 2 (see Canvas)' }),
+      ],
+      CTX,
+    );
+    const merged = dedupeItems(items);
+    expect(merged).toHaveLength(1);
+    expect(merged[0]!.dueTime).toBeNull();
   });
 });

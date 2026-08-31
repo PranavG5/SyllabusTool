@@ -7,8 +7,7 @@
  */
 
 import {
-  DEFAULT_DUE_TIME, parseISODate, formatISODate, parseWallTime, formatWallTime,
-  type CivilDate,
+  parseISODate, formatISODate, parseWallTime, formatWallTime, type CivilDate,
 } from '@/lib/datetime';
 import { resolveRelativeDate, type RelativeContext, type RelativeReference } from '@/lib/schedule/relative-dates';
 import type { Confidence, ItemType } from '@/lib/types';
@@ -20,8 +19,8 @@ export interface NormalizedItem {
   courseCode: string;
   courseName: string | null;
   dueDate: string | null;
+  /** Wall time in the term's zone, or null for a day-level deadline. */
   dueTime: string | null;
-  timeIsDefault: boolean;
   weight: number | null;
   location: string | null;
   sourceSnippet: string;
@@ -186,16 +185,19 @@ export function normalizeItem(raw: RawItem, ctx: NormalizeContext): NormalizedIt
     }
   }
 
-  // 3. Time: use what the document said, otherwise default and say so.
+  // 3. Time: only ever what the document actually said.
+  //
+  // A syllabus that says "Problem Set 4 — October 15" is naming a DAY, not an
+  // instant, and we store it as one. Inventing 11:59 PM would turn a date into
+  // a timezone-dependent moment one minute from midnight: rendered anywhere
+  // east of the term's zone it lands on the 16th, which is precisely the error
+  // this product exists to prevent. A null time means a day-level deadline and
+  // exports as an all-day event, which reads as "October 15" on every device in
+  // every timezone.
   let dueTime: string | null = null;
-  let timeIsDefault = false;
   if (raw.due_time) {
     const parsed = parseWallTime(raw.due_time);
     if (parsed) dueTime = formatWallTime(parsed.hour, parsed.minute);
-  }
-  if (!dueTime && dueDate) {
-    dueTime = DEFAULT_DUE_TIME;
-    timeIsDefault = true;
   }
 
   return {
@@ -205,7 +207,6 @@ export function normalizeItem(raw: RawItem, ctx: NormalizeContext): NormalizedIt
     courseName: raw.course_name?.trim() || null,
     dueDate,
     dueTime,
-    timeIsDefault,
     weight: clampWeight(raw.weight),
     location: raw.location?.trim() || null,
     sourceSnippet: snippet,

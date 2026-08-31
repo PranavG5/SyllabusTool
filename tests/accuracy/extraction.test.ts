@@ -104,12 +104,13 @@ suite('extraction accuracy', () => {
           wrongDates.push(`${want.course} ${want.title}: expected ${want.dueDate}, got ${hit.dueDate ?? 'null'}`);
           continue;
         }
-        if (want.dueTime && hit.dueTime !== want.dueTime) {
-          wrongDates.push(`${want.course} ${want.title}: expected time ${want.dueTime}, got ${hit.dueTime ?? 'null'}`);
-          continue;
-        }
-        if (want.timeIsDefault !== undefined && hit.timeIsDefault !== want.timeIsDefault) {
-          wrongDates.push(`${want.course} ${want.title}: time_is_default should be ${want.timeIsDefault}`);
+        // `dueTime: null` is a real assertion — it says the syllabus gave no
+        // time and the item must stay all-day rather than being handed an
+        // invented 11:59 PM.
+        if (want.dueTime !== undefined && hit.dueTime !== want.dueTime) {
+          wrongDates.push(
+            `${want.course} ${want.title}: expected time ${want.dueTime ?? 'none (all-day)'}, got ${hit.dueTime ?? 'none'}`,
+          );
           continue;
         }
         matched += 1;
@@ -154,7 +155,8 @@ suite('extraction accuracy', () => {
         expect(item.sourceSnippet.trim().length, `${item.title} has no source snippet`).toBeGreaterThan(0);
         if (item.dueDate) {
           expect(parseISODate(item.dueDate), `${item.title} has an unparseable date`).not.toBeNull();
-          expect(item.dueTime, `${item.title} is dated but has no time`).not.toBeNull();
+          // A dated item may legitimately have no time — that is an all-day
+          // deadline, and the common case.
         } else {
           expect(item.dueTime, `${item.title} has a time but no date`).toBeNull();
           expect(item.confidence, `${item.title} is undated but not low confidence`).toBe('low');

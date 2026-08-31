@@ -64,16 +64,13 @@ export async function PATCH(
 
     if (body.dueDate !== undefined) {
       update.due_date = body.dueDate;
-      // A date with no time is an all-day item; clearing the date clears both.
-      if (body.dueDate === null) {
-        update.due_time = null;
-        update.time_is_default = false;
-      }
+      // Clearing the date clears the time with it: a time without a day is
+      // not a deadline.
+      if (body.dueDate === null) update.due_time = null;
     }
     if (body.dueTime !== undefined) {
+      // Clearing the time turns the item back into an all-day deadline.
       update.due_time = body.dueTime;
-      // A time the student typed is theirs, not our default.
-      update.time_is_default = false;
     }
 
     if (Object.keys(update).length === 0) {

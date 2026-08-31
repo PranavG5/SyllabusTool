@@ -6,7 +6,7 @@ import type { ScheduleItem } from '@/lib/types';
 function item(p: Partial<ScheduleItem> & { id: string }): ScheduleItem {
   return {
     courseId: 'c1', termId: 't1', title: 'Thing', type: 'assignment',
-    dueDate: null, dueTime: '23:59', timeIsDefault: true, weight: null, location: null,
+    dueDate: null, dueTime: null, weight: null, location: null,
     sourceSnippet: 's', sourceUploadId: null, sourceFilename: null,
     confidence: 'high', status: 'active', revision: 0,
     ...p,
@@ -84,6 +84,17 @@ describe('groupSchedule', () => {
       TZ, NOW,
     );
     expect(g.thisWeek.map((i) => i.id)).toEqual(['early', 'late']);
+  });
+
+  it('puts all-day items first within a day, as calendars do', () => {
+    const g = groupSchedule(
+      [
+        item({ id: 'timed', dueDate: '2026-09-11', dueTime: '09:00' }),
+        item({ id: 'allday', dueDate: '2026-09-11', dueTime: null }),
+      ],
+      TZ, NOW,
+    );
+    expect(g.thisWeek.map((i) => i.id)).toEqual(['allday', 'timed']);
   });
 
   it('uses the term timezone to decide what "today" is', () => {

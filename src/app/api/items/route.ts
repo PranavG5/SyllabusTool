@@ -4,7 +4,7 @@ import { AppError } from '@/lib/errors';
 import { handle, json, requireUser } from '@/lib/http';
 import { createServerClient } from '@/lib/supabase/server';
 import { ITEM_TYPES } from '@/lib/types';
-import { DEFAULT_DUE_TIME, parseISODate } from '@/lib/datetime';
+import { parseISODate } from '@/lib/datetime';
 
 export const runtime = 'nodejs';
 
@@ -46,8 +46,8 @@ export async function POST(request: Request): Promise<NextResponse> {
         title: body.title,
         type: body.type,
         due_date: body.dueDate,
-        due_time: body.dueDate ? (body.dueTime ?? DEFAULT_DUE_TIME) : null,
-        time_is_default: Boolean(body.dueDate) && !body.dueTime,
+        // No time given means a day-level deadline, exported as all-day.
+        due_time: body.dueDate ? body.dueTime : null,
         // Hand-entered items are still traceable — to the student.
         source_snippet: 'Added by you',
         confidence: 'high',

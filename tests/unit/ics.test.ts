@@ -17,7 +17,7 @@ function item(p: Partial<ScheduleItem> = {}): ScheduleItem {
     id: '11111111-1111-4111-8111-111111111111',
     courseId: 'c1', termId: 'term-1',
     title: 'Problem Set 4', type: 'assignment',
-    dueDate: '2026-10-15', dueTime: '23:59', timeIsDefault: true,
+    dueDate: '2026-10-15', dueTime: null,
     weight: null, location: null,
     sourceSnippet: 'PS4 — due Oct 15', sourceUploadId: null, sourceFilename: null,
     confidence: 'high', status: 'active', revision: 0,
@@ -238,17 +238,21 @@ describe('what gets exported', () => {
     expect(ics).toContain('SUMMARY:CS 2110 — Problem Set 4');
   });
 
-  it('always attaches a reminder to a timed deadline', () => {
-    const ics = build([item()]);
+  it('always attaches reminders to a timed deadline', () => {
+    const ics = build([item({ dueTime: '17:00' })]);
     expect((ics.match(/BEGIN:VALARM/g) ?? []).length).toBe(2);
     expect(ics).toContain('TRIGGER:-P1D');
     expect(ics).toContain('TRIGGER:-PT2H');
   });
 
-  it('gives an all-day item one evening-before reminder', () => {
-    const ics = build([item({ dueTime: null, timeIsDefault: false })]);
-    expect((ics.match(/BEGIN:VALARM/g) ?? []).length).toBe(1);
+  it('offsets an all-day reminder into waking hours', () => {
+    const ics = build([item({ dueTime: null })]);
+    expect((ics.match(/BEGIN:VALARM/g) ?? []).length).toBe(2);
+    // An all-day event starts at local midnight, so -P1D would fire at
+    // midnight. -PT14H is 10:00 the previous morning; PT9H is 09:00 on the day.
     expect(ics).toContain('TRIGGER:-PT14H');
+    expect(ics).toContain('TRIGGER:PT9H');
+    expect(ics).not.toContain('TRIGGER:-P1D');
   });
 
   it('carries the source snippet so the event is traceable', () => {
@@ -256,31 +260,66 @@ describe('what gets exported', () => {
     expect(ics.replace(/\r\n /g, '')).toContain('PS4 — due Oct 15');
   });
 
-  it('says so when the time was defaulted', () => {
-    const unfolded = build([item({ timeIsDefault: true })]).replace(/\r\n /g, '');
-    expect(unfolded).toContain('11:59 PM assumed');
+  it('says plainly that an all-day item had no stated time', () => {
+    const unfolded = build([item({ dueTime: null })]).replace(/\r\n /g, '');
+    expect(unfolded).toContain('did not give a time');
+    expect(unfolded).not.toContain('11:59 PM');
   });
 });
 
-describe('DST correctness across the term', () => {
-  it('gives an October and a December 11:59 PM deadline different UTC offsets', () => {
-    const ics = build([
-      item({ id: 'oct', dueDate: '2026-10-15' }),
-      item({ id: 'dec', dueDate: '2026-12-10' }),
-    ]);
-    const starts = propsOf(ics, 'DTSTART');
-    // EDT (UTC-4) in October -> 03:59Z; EST (UTC-5) in December -> 04:59Z.
-    expect(starts).toContain('DTSTART:20261016T035900Z');
-    expect(starts).toContain('DTSTART:20261211T045900Z');
+describe('a day-level deadline stays on its day, everywhere', () => {
+  // This is the reason all-day is the default. A 23:59 timed event is one
+  // minute from midnight: rendered in any zone east of the term's, it lands on
+  // the following date. An all-day event is a floating date and cannot.
+  it('emits a floating DATE, not an instant', () => {
+    const ics = build([item({ dueDate: '2026-10-15', dueTime: null })]);
+    expect(propsOf(ics, 'DTSTART')).toEqual(['DTSTART;VALUE=DATE:20261015']);
+    // DTEND is exclusive, so a one-day event ends on the 16th.
+    expect(propsOf(ics, 'DTEND')).toEqual(['DTEND;VALUE=DATE:20261016']);
+    expect(ics).not.toContain('T235900Z');
   });
 
-  it('renders both back as 11:59 PM in the term timezone', () => {
+  it('reads as the same calendar day in every timezone', () => {
+    const ics = build([item({ dueDate: '2026-10-15', dueTime: null })]);
+    const stamp = propsOf(ics, 'DTSTART')[0]!.split(':')[1]!;
+    expect(stamp).toBe('20261015');
+    // A floating date carries no offset at all, so there is nothing for a
+    // client in Auckland or Los Angeles to shift.
+    expect(stamp).not.toMatch(/[TZ]/);
+  });
+
+  it('would have drifted to the 16th as a 23:59 timed event', () => {
+    // Demonstrates the failure the default avoids: the same deadline as a
+    // timed 23:59 event in New York is already the 16th in UTC.
+    const timed = build([item({ dueDate: '2026-10-15', dueTime: '23:59' })]);
+    expect(propsOf(timed, 'DTSTART')).toEqual(['DTSTART:20261016T035900Z']);
+  });
+});
+
+describe('DST correctness for times the syllabus actually stated', () => {
+  it('gives an October and a December 7:30 PM exam different UTC offsets', () => {
+    const ics = build([
+      item({ id: 'oct', dueDate: '2026-10-15', dueTime: '19:30', type: 'exam' }),
+      item({ id: 'dec', dueDate: '2026-12-10', dueTime: '19:30', type: 'exam' }),
+    ]);
+    const starts = propsOf(ics, 'DTSTART');
+    // EDT (UTC-4) in October -> 23:30Z; EST (UTC-5) in December -> 00:30Z next day.
+    expect(starts).toContain('DTSTART:20261015T233000Z');
+    expect(starts).toContain('DTSTART:20261211T003000Z');
+  });
+
+  it('renders both back as 7:30 PM in the term timezone', () => {
     const fmt = new Intl.DateTimeFormat('en-US', {
       timeZone: TERM.timezone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
     });
-    for (const [y, mo, d, h, mi] of [[2026, 9, 16, 3, 59], [2026, 11, 11, 4, 59]] as const) {
-      expect(fmt.format(new Date(Date.UTC(y, mo, d, h, mi)))).toBe('23:59');
+    for (const [y, mo, d, h, mi] of [[2026, 9, 15, 23, 30], [2026, 11, 11, 0, 30]] as const) {
+      expect(fmt.format(new Date(Date.UTC(y, mo, d, h, mi)))).toBe('19:30');
     }
+  });
+
+  it('still clamps a stated 11:59 PM so it does not spill into the next day', () => {
+    const ics = build([item({ dueDate: '2026-10-15', dueTime: '23:59' })]);
+    expect(propsOf(ics, 'DTEND')).toEqual(['DTEND:20261016T040000Z']);
   });
 });
 

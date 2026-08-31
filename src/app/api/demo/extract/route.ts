@@ -98,7 +98,6 @@ export async function POST(request: Request): Promise<NextResponse> {
         course: item.courseCode,
         dueDate: item.dueDate,
         dueTime: item.dueTime,
-        timeIsDefault: item.timeIsDefault,
         weight: item.weight,
         location: item.location,
         sourceSnippet: item.sourceSnippet,

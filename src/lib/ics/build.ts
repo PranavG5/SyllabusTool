@@ -10,10 +10,14 @@
  *     database bumps on every user-visible edit, so clients know the newer
  *     version wins.
  *
- *  2. **DST-safe times.** Wall times are converted to UTC instants against the
- *     term's IANA zone at each event's own date. An 11:59 PM deadline in
- *     October and one in December produce different UTC offsets, which is
- *     exactly right — both still read 11:59 PM to the student.
+ *  2. **Dates stay dates; times stay times.** Most syllabus deadlines name a
+ *     day and no hour, and those export as all-day events — floating dates
+ *     that read "October 15" on every device in every timezone, and cannot
+ *     drift onto the 16th for a student who travels. Only an item whose
+ *     syllabus actually stated a time becomes a timed event, and that one is
+ *     converted to a UTC instant against the term's IANA zone at its own date,
+ *     so a 7:30 PM exam in October and one in December get different offsets
+ *     and both still read 7:30 PM.
  *
  *  3. **Folding and escaping.** Lines fold at 75 *octets* (not characters) and
  *     never mid-codepoint; text values escape backslash, semicolon, comma and
@@ -169,11 +173,10 @@ function describe(item: ScheduleItem, course: Course, appUrl?: string): string {
     if (t) {
       const hour12 = t.hour % 12 === 0 ? 12 : t.hour % 12;
       const suffix = t.hour < 12 ? 'AM' : 'PM';
-      parts.push(
-        `Due ${hour12}:${String(t.minute).padStart(2, '0')} ${suffix}` +
-          (item.timeIsDefault ? ' (no time was given in the syllabus; 11:59 PM assumed)' : ''),
-      );
+      parts.push(`Due ${hour12}:${String(t.minute).padStart(2, '0')} ${suffix}`);
     }
+  } else {
+    parts.push('Due this day. Your syllabus did not give a time.');
   }
   if (item.weight != null) parts.push(`Worth ${item.weight}% of the final grade`);
   if (item.confidence !== 'high') {
@@ -214,10 +217,13 @@ function buildEvent(
   out.push('STATUS:CONFIRMED');
   out.push('TRANSP:TRANSPARENT');
 
-  // Reminders. Timed deadlines get two; an all-day item gets one the evening
-  // before, since a midnight alarm is useless.
+  // Reminders. An all-day event starts at local midnight, so a trigger
+  // measured from DTSTART has to be offset into waking hours: -PT14H is 10:00
+  // the previous morning ("due tomorrow") and PT9H is 09:00 on the day itself
+  // ("due today"). A raw -P1D would fire at midnight, which nobody reads.
   if (timing.allDay) {
     out.push('BEGIN:VALARM', 'ACTION:DISPLAY', line('DESCRIPTION', escapeText(item.title)), 'TRIGGER:-PT14H', 'END:VALARM');
+    out.push('BEGIN:VALARM', 'ACTION:DISPLAY', line('DESCRIPTION', escapeText(item.title)), 'TRIGGER:PT9H', 'END:VALARM');
   } else {
     out.push('BEGIN:VALARM', 'ACTION:DISPLAY', line('DESCRIPTION', escapeText(item.title)), 'TRIGGER:-P1D', 'END:VALARM');
     out.push('BEGIN:VALARM', 'ACTION:DISPLAY', line('DESCRIPTION', escapeText(item.title)), 'TRIGGER:-PT2H', 'END:VALARM');

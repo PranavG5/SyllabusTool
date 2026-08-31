@@ -1,21 +1,57 @@
 {
   "name": "Deadlines written out in prose, dates spelled as words",
-  "notes": "No table, no bullets, and dates written as English ('the ninth of September', 'December the eighth'). The take-home midterm's due date is stated only as an offset from its hand-out date, which the document itself supplies — that is resolvable arithmetic, not a guess.",
+  "notes": "No table, no bullets, and dates written as English ('the ninth of September', 'December the eighth'). The take-home midterm's due date is stated only as an offset from its hand-out date, which the document itself supplies \u2014 that is resolvable arithmetic, not a guess.",
   "context": {
     "termName": "Fall 2026",
     "termStart": "2026-08-24",
     "termEnd": "2026-12-11",
-    "meetingDays": [2],
+    "meetingDays": [
+      2
+    ],
     "courseHint": null
   },
   "expectedItems": [
-    { "title": "Paper 1", "type": "assignment", "course": "ENGL 210", "dueDate": "2026-09-09" },
-    { "title": "Paper 2", "type": "assignment", "course": "ENGL 210", "dueDate": "2026-10-21", "dueTime": "17:00" },
-    { "title": "Seminar paper", "type": "assignment", "course": "ENGL 210", "dueDate": "2026-12-08" },
-    { "title": "Take-home midterm", "type": "exam", "course": "ENGL 210", "dueDate": "2026-10-13" }
+    {
+      "title": "Paper 1",
+      "type": "assignment",
+      "course": "ENGL 210",
+      "dueDate": "2026-09-09",
+      "dueTime": null
+    },
+    {
+      "title": "Paper 2",
+      "type": "assignment",
+      "course": "ENGL 210",
+      "dueDate": "2026-10-21",
+      "dueTime": "17:00"
+    },
+    {
+      "title": "Seminar paper",
+      "type": "assignment",
+      "course": "ENGL 210",
+      "dueDate": "2026-12-08",
+      "dueTime": null
+    },
+    {
+      "title": "Take-home midterm",
+      "type": "exam",
+      "course": "ENGL 210",
+      "dueDate": "2026-10-13",
+      "dueTime": null
+    }
   ],
-  "allowedExtraTitles": ["oliver twist", "jane eyre", "wuthering heights", "bleak house", "seminar discussion", "reading"],
-  "mustNotExtract": ["office hours", "sign-up sheet goes around"],
+  "allowedExtraTitles": [
+    "oliver twist",
+    "jane eyre",
+    "wuthering heights",
+    "bleak house",
+    "seminar discussion",
+    "reading"
+  ],
+  "mustNotExtract": [
+    "office hours",
+    "sign-up sheet goes around"
+  ],
   "minRecall": 0.75,
   "minPrecision": 0.5
 }

@@ -29,12 +29,9 @@ function ItemRow({ item, course }: { item: ScheduleItem; course: Course | undefi
       </span>
       {course ? <CourseTag code={course.code} color={course.color} size="sm" /> : null}
       <span className="chip">{ITEM_TYPE_LABELS[item.type]}</span>
-      {item.dueTime ? (
-        <span className="hint tabular-nums">
-          {formatTime(item.dueTime)}
-          {item.timeIsDefault ? <span className="sr-only"> (time assumed)</span> : null}
-        </span>
-      ) : null}
+      <span className="hint tabular-nums">
+        {item.dueTime ? formatTime(item.dueTime) : 'All day'}
+      </span>
       <ConfidenceBadge confidence={item.confidence} />
     </li>
   );

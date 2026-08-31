@@ -253,7 +253,7 @@ export async function syncToGoogle(userId: string, payload: SchedulePayload): Pr
       summary: `${course.code} — ${item.title}`,
       description: [
         `${ITEM_TYPE_LABELS[item.type]} · ${course.code}`,
-        item.timeIsDefault ? 'No time was given in the syllabus; 11:59 PM assumed.' : '',
+        item.dueTime ? '' : 'Due this day. Your syllabus did not give a time.',
         '',
         'From your syllabus:',
         item.sourceSnippet,
@@ -264,6 +264,8 @@ export async function syncToGoogle(userId: string, payload: SchedulePayload): Pr
       ...timingFor(item.dueDate, item.dueTime, payload.term.timezone),
       reminders: {
         useDefault: false,
+        // Google measures all-day reminders back from local midnight, so 14h
+        // is 10:00 the previous morning — the same offset the ICS uses.
         overrides: item.dueTime
           ? [{ method: 'popup', minutes: 24 * 60 }, { method: 'popup', minutes: 120 }]
           : [{ method: 'popup', minutes: 14 * 60 }],

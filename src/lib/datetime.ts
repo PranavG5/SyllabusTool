@@ -13,9 +13,6 @@
  *     own TZ setting can never change a result.
  */
 
-/** Deadlines with no stated time land here, and are flagged as inferred. */
-export const DEFAULT_DUE_TIME = '23:59';
-
 export const WEEKDAY_NAMES = [
   'sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday',
 ] as const;

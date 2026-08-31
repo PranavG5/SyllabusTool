@@ -169,7 +169,6 @@ describe('deduplication across files', () => {
     const merged = result.items[0]!;
     // The merge keeps the richer field from each copy.
     expect(merged.dueTime).toBe('14:00');
-    expect(merged.timeIsDefault).toBe(false);
     expect(merged.location).toBe('Sibley 101');
     expect(merged.weight).toBe(25);
   });
@@ -215,11 +214,19 @@ describe('relative dates resolve through the whole pipeline', () => {
     expect(result.items[0]!.unresolvedReason).toBeTruthy();
   });
 
-  it('defaults a stated date with no time to 11:59 PM and flags it', async () => {
+  it('leaves a stated date with no time as an all-day deadline', async () => {
     responses.set('Pasted text', [raw({ title: 'Essay', course_code: 'CS 2110', due_date: '2026-10-01' })]);
     const result = await runExtraction({ sources: [], pastedText: 'x', ...TERM });
-    expect(result.items[0]!.dueTime).toBe('23:59');
-    expect(result.items[0]!.timeIsDefault).toBe(true);
+    expect(result.items[0]!.dueDate).toBe('2026-10-01');
+    expect(result.items[0]!.dueTime).toBeNull();
+  });
+
+  it('keeps a time the syllabus did state', async () => {
+    responses.set('Pasted text', [
+      raw({ title: 'Prelim', course_code: 'CS 2110', type: 'exam', due_date: '2026-10-01', due_time: '19:30' }),
+    ]);
+    const result = await runExtraction({ sources: [], pastedText: 'x', ...TERM });
+    expect(result.items[0]!.dueTime).toBe('19:30');
   });
 });
 
