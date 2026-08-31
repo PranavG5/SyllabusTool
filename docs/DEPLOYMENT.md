@@ -8,7 +8,8 @@
 | Schema, RLS, functions, storage bucket | **Applied** — migrations 0001–0005 |
 | Live security posture | **Verified** — see below |
 | Git `main` branch | **Pushed** |
-| Vercel project | **Blocked** — the connected integration returns 403 on project creation |
+| Vercel project | **Live** — https://syllabus-tool-six.vercel.app |
+| Production URL | Vercel appended `-six` because `syllabus-tool.vercel.app` was already taken by an unrelated project. `NEXT_PUBLIC_SITE_URL` must be the `-six` domain. |
 | `SUPABASE_SERVICE_ROLE_KEY` | **Needed from you** — no API exposes it, by design |
 | `ANTHROPIC_API_KEY` | **Needed from you** — extraction cannot run without it |
 
@@ -72,6 +73,29 @@ Two of these you have to fetch yourself:
 `NEXT_PUBLIC_SITE_URL` must match the real domain. It builds the calendar-feed
 URLs and the Google OAuth redirect, so a wrong value produces feed links that
 point at the wrong host.
+
+### Troubleshooting: "requested path is invalid" when confirming email
+
+If the confirmation link lands on a Supabase URL with your site glued onto it:
+
+```
+oeglyntvzfmcbejyuygj.supabase.co/syllabus-tool-six.vercel.app?code=...
+{"error":"requested path is invalid"}
+```
+
+the **Site URL is missing its scheme**. Supabase treats a value without
+`https://` as a path relative to its own host, so it redirects to itself.
+
+Fix in Supabase → Authentication → URL Configuration:
+
+- **Site URL**: `https://syllabus-tool-six.vercel.app` — the `https://` matters
+- **Redirect URLs**: add `https://syllabus-tool-six.vercel.app/**`
+
+The allow-list entry is not optional. `emailRedirectTo` points at
+`/auth/callback`, and Supabase silently falls back to the bare Site URL when
+that target is not allow-listed — which sends the code to the landing page
+instead. Middleware forwards a stray `?code=` to `/auth/callback` so sign-in
+still completes if that happens, but the allow-list is the real fix.
 
 ### 3. Point Supabase Auth at the deployed domain
 

@@ -8,7 +8,39 @@ import { createServerClient } from '@supabase/ssr';
  * This is not an authorisation layer: every route re-checks the session, and
  * the database enforces RLS regardless. Middleware only keeps the cookie fresh.
  */
+/**
+ * Supabase sends an auth code to the project's configured Site URL, which is
+ * the site root, not our callback route. Only `emailRedirectTo` targets
+ * /auth/callback, and Supabase silently falls back to the Site URL whenever
+ * that value is not in the project's redirect allow-list.
+ *
+ * When that happens the student lands on the landing page, still signed out,
+ * with a `?code=` in the address bar and no idea why nothing worked. Catching
+ * it here and forwarding to the callback makes sign-in survive a
+ * misconfigured allow-list.
+ *
+ * Not a security hole: the code is single-use and PKCE ties it to the
+ * code_verifier cookie in the browser that requested it, so a code pasted from
+ * elsewhere fails the exchange and lands on /login with an explanation.
+ */
+function authCodeRedirect(request: NextRequest): NextResponse | null {
+  const { pathname, searchParams } = request.nextUrl;
+  if (pathname.startsWith('/auth/') || pathname.startsWith('/api/')) return null;
+  if (!searchParams.has('code') && !searchParams.has('token_hash')) return null;
+
+  const target = request.nextUrl.clone();
+  target.pathname = '/auth/callback';
+  // Preserve where they were headed, so the callback can send them back there.
+  if (pathname !== '/' && !target.searchParams.has('next')) {
+    target.searchParams.set('next', pathname);
+  }
+  return NextResponse.redirect(target);
+}
+
 export async function middleware(request: NextRequest) {
+  const forwarded = authCodeRedirect(request);
+  if (forwarded) return forwarded;
+
   const response = NextResponse.next({ request });
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
