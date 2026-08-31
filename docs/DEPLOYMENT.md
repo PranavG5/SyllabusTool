@@ -74,6 +74,34 @@ Two of these you have to fetch yourself:
 URLs and the Google OAuth redirect, so a wrong value produces feed links that
 point at the wrong host.
 
+### Troubleshooting: the confirmation link 404s on a lookalike domain
+
+Symptom: clicking the email link lands on `syllabus-tool.vercel.app/input`
+with a Vercel `404: NOT_FOUND`.
+
+That domain is **not this app**. Vercel assigned `syllabus-tool-six.vercel.app`
+because the bare name was already taken by an unrelated project, which is live
+and returns 200 on `/` — so the mistake looks like a broken app rather than a
+wrong address.
+
+The sign-in itself succeeded. The session cookie was set correctly; only the
+final redirect went astray. Confirm by visiting
+`https://syllabus-tool-six.vercel.app/input` directly — you will usually
+already be signed in.
+
+Fix both places that name the domain:
+
+1. **Vercel → Environment Variables**: `NEXT_PUBLIC_SITE_URL` must be
+   `https://syllabus-tool-six.vercel.app`. Redeploy afterwards — `NEXT_PUBLIC_*`
+   values are inlined at build time, so saving alone changes nothing.
+2. **Supabase → Authentication → URL Configuration**: Site URL and the redirect
+   allow-list must use the same `-six` domain.
+
+The callbacks no longer depend on `NEXT_PUBLIC_SITE_URL` — they redirect
+relative to the incoming request, so a wrong value can no longer eject anyone
+mid-sign-in. It still matters for calendar feed URLs baked into exported `.ics`
+files and for the Google OAuth `redirect_uri`, both of which must be absolute.
+
 ### Troubleshooting: "requested path is invalid" when confirming email
 
 If the confirmation link lands on a Supabase URL with your site glued onto it:
