@@ -36,10 +36,75 @@ function propsOf(ics: string, name: string): string[] {
 }
 
 describe('text escaping', () => {
-  it('escapes the four TEXT specials, backslash first', () => {
-    expect(escapeText('a;b,c\\d')).toBe('a\;b\\,c\\\\d');
-    expect(escapeText('line1\nline2')).toBe('line1\\nline2');
-    expect(escapeText('a\r\nb')).toBe('a\\nb');
+  // Asserted by character code, not by string literal. The first version of
+  // this test wrote the expectation as '\;', which JavaScript collapses to a
+  // bare ';' — so it agreed with an implementation that was not escaping
+  // semicolons at all. Codes cannot be fooled that way.
+  const BACKSLASH = String.fromCharCode(92);
+
+  it('escapes a semicolon as backslash-semicolon', () => {
+    const out = escapeText('Gates B01; Statler');
+    expect(out).toBe(`Gates B01${BACKSLASH}; Statler`);
+    expect(out.charCodeAt(9)).toBe(92);
+    expect(out).toHaveLength('Gates B01; Statler'.length + 1);
+  });
+
+  it('escapes a comma as backslash-comma', () => {
+    expect(escapeText('a,b')).toBe(`a${BACKSLASH},b`);
+  });
+
+  it('escapes a backslash by doubling it', () => {
+    expect(escapeText(`a${BACKSLASH}b`)).toBe(`a${BACKSLASH}${BACKSLASH}b`);
+  });
+
+  it('escapes backslashes first, so later escapes are not double-escaped', () => {
+    // Input: a \ b ; c  ->  a \\ b \; c
+    const out = escapeText(`a${BACKSLASH}b;c`);
+    expect(out).toBe(`a${BACKSLASH}${BACKSLASH}b${BACKSLASH};c`);
+  });
+
+  it('escapes newlines as literal backslash-n', () => {
+    expect(escapeText('line1\nline2')).toBe(`line1${BACKSLASH}nline2`);
+    expect(escapeText('a\r\nb')).toBe(`a${BACKSLASH}nb`);
+    expect(escapeText('a\rb')).toBe(`a${BACKSLASH}nb`);
+  });
+
+  it('leaves a colon alone — only DQUOTE contexts need it escaped', () => {
+    expect(escapeText('Due 5:00 PM')).toBe('Due 5:00 PM');
+  });
+
+  it('escapes everything at once', () => {
+    const out = escapeText(`Lab; part 2, "notes"${BACKSLASH}x\nnext`);
+    expect(out).toBe(`Lab${BACKSLASH}; part 2${BACKSLASH}, "notes"${BACKSLASH}${BACKSLASH}x${BACKSLASH}nnext`);
+  });
+});
+
+describe('escaping survives a round trip through the calendar', () => {
+  const BACKSLASH = String.fromCharCode(92);
+
+  it('emits escaped specials in SUMMARY and LOCATION', () => {
+    const ics = build([
+      item({ title: 'Lab; part 2, final', location: 'Gates B01; Statler' }),
+    ]);
+    const unfolded = ics.replace(/\r\n[ \t]/g, '');
+    expect(unfolded).toContain(`SUMMARY:CS 2110 — Lab${BACKSLASH}; part 2${BACKSLASH}, final`);
+    expect(unfolded).toContain(`LOCATION:Gates B01${BACKSLASH}; Statler`);
+  });
+
+  it('never emits a bare semicolon or comma inside a TEXT value', () => {
+    const ics = build([item({ title: 'A; B, C', location: 'X; Y', sourceSnippet: 'row; cell, cell' })]);
+    const unfolded = ics.replace(/\r\n[ \t]/g, '');
+    for (const line of unfolded.split('\r\n')) {
+      const [name, ...rest] = line.split(':');
+      if (!['SUMMARY', 'LOCATION', 'DESCRIPTION', 'CATEGORIES'].includes(name ?? '')) continue;
+      const value = rest.join(':');
+      // Every ; and , in the value must be preceded by a backslash.
+      for (let i = 0; i < value.length; i += 1) {
+        if (value[i] === ';' || value[i] === ',') {
+          expect(value.charCodeAt(i - 1), `unescaped ${value[i]} in ${name}`).toBe(92);
+        }
+      }
+    }
   });
 });
 

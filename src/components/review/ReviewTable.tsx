@@ -44,8 +44,38 @@ interface RowProps {
 
 function Row({ item, courses, onChange, onDelete, saving }: RowProps) {
   const [showSource, setShowSource] = useState(false);
+  const [openingFile, setOpeningFile] = useState(false);
+  const [fileError, setFileError] = useState<string | null>(null);
   const course = courses.find((c) => c.id === item.courseId);
   const needsAttention = item.dueDate === null || item.confidence !== 'high';
+
+  /**
+   * Opens the original upload through a short-lived signed URL. The window is
+   * opened synchronously and navigated once the URL arrives, because opening it
+   * after an await trips popup blockers.
+   */
+  async function openOriginal() {
+    if (!item.sourceUploadId) return;
+    setOpeningFile(true);
+    setFileError(null);
+    const tab = window.open('', '_blank', 'noopener,noreferrer');
+    try {
+      const response = await fetch(`/api/uploads/${item.sourceUploadId}`);
+      const body = await response.json();
+      if (!response.ok) {
+        tab?.close();
+        setFileError(body?.error?.message ?? 'We could not open that file.');
+        return;
+      }
+      if (tab) tab.location.href = body.url;
+      else window.location.href = body.url;
+    } catch {
+      tab?.close();
+      setFileError('We could not reach the server.');
+    } finally {
+      setOpeningFile(false);
+    }
+  }
 
   return (
     <li
@@ -155,6 +185,20 @@ function Row({ item, courses, onChange, onDelete, saving }: RowProps) {
           <p className="mt-1 whitespace-pre-wrap font-mono text-[13px] leading-relaxed text-[var(--color-ink)]">
             {item.sourceSnippet}
           </p>
+          {item.sourceUploadId ? (
+            <button
+              type="button"
+              onClick={openOriginal}
+              disabled={openingFile}
+              className="btn btn-ghost mt-2 px-0 text-[var(--color-accent)]"
+            >
+              {openingFile ? 'Opening…' : 'Open the original file'}
+              <span className="sr-only"> {item.sourceFilename ?? ''}</span>
+            </button>
+          ) : null}
+          {fileError ? (
+            <p role="alert" className="mt-1 text-sm text-[var(--color-flag)]">{fileError}</p>
+          ) : null}
         </div>
       ) : null}
     </li>

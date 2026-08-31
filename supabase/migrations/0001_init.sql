@@ -200,6 +200,8 @@ create table if not exists public.extraction_jobs (
   error_message    text,
   item_count       integer not null default 0,
   attempts         integer not null default 0,
+  -- What the student typed into "Course name" when the material does not say.
+  course_hint      text,
   created_at       timestamptz not null default now(),
   started_at       timestamptz,
   finished_at      timestamptz

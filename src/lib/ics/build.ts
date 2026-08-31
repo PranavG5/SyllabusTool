@@ -47,11 +47,18 @@ export interface BuildOptions {
 // Primitives
 // ---------------------------------------------------------------------------
 
-/** RFC 5545 §3.3.11 TEXT escaping. Order matters: backslash first. */
+/**
+ * RFC 5545 §3.3.11 TEXT escaping. Order matters: backslash first, or the
+ * backslashes introduced by the later rules get escaped a second time.
+ *
+ * Note the doubled backslashes in every replacement — `'\\;'` is the two
+ * characters the spec asks for, while `'\;'` is just a semicolon, which is
+ * exactly the bug this comment exists to stop someone reintroducing.
+ */
 export function escapeText(value: string): string {
   return value
     .replace(/\\/g, '\\\\')
-    .replace(/;/g, '\;')
+    .replace(/;/g, '\\;')
     .replace(/,/g, '\\,')
     .replace(/\r\n|\r|\n/g, '\\n');
 }

@@ -63,6 +63,7 @@ export async function createJob(input: CreateJobInput): Promise<CreatedJob> {
     term_id: input.termId,
     status: 'queued',
     total_files: input.files.length + (input.pastedText ? 1 : 0),
+    course_hint: input.courseHint,
   });
   if (jobError) {
     logger.error('jobs.create_failed', { message: jobError.message });
@@ -241,7 +242,7 @@ export async function runJob(jobId: string): Promise<void> {
       termName: term?.name ?? null,
       termStartDate: term?.start_date ?? null,
       termEndDate: term?.end_date ?? null,
-      courseHint: null,
+      courseHint: job.course_hint,
       meetingDaysByCourse,
       defaultMeetingDays: [],
     });

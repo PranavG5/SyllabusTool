@@ -27,11 +27,19 @@ export async function loadSchedule(
   const termRow = terms?.[0];
   if (!termRow) return null;
 
-  const [{ data: courseRows }, { data: itemRows }, { data: uploadRows }] = await Promise.all([
+  const [{ data: courseRows }, { data: itemRows }] = await Promise.all([
     supabase.from('courses').select('*').eq('term_id', termRow.id).order('position'),
     supabase.from('items').select('*').eq('term_id', termRow.id),
-    supabase.from('uploads').select('id, filename').eq('user_id', termRow.user_id),
   ]);
+
+  // Only the uploads these items actually cite, not every file the account has
+  // ever produced.
+  const referencedUploadIds = [
+    ...new Set((itemRows ?? []).map((i) => i.source_upload_id).filter((id): id is string => Boolean(id))),
+  ];
+  const { data: uploadRows } = referencedUploadIds.length
+    ? await supabase.from('uploads').select('id, filename').in('id', referencedUploadIds)
+    : { data: [] as { id: string; filename: string }[] };
 
   const filenameByUpload = new Map((uploadRows ?? []).map((u) => [u.id, u.filename]));
 

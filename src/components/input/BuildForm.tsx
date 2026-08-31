@@ -24,6 +24,39 @@ interface Limits {
   maxInputChars: number;
 }
 
+/**
+ * The student's own zone, read from their browser. Deadlines are stored against
+ * this, so getting it wrong shifts every export by hours — assuming Eastern
+ * would be wrong for most of the world and for most of the United States.
+ */
+function detectTimezone(fallback: string): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function timezoneOptions(current: string): string[] {
+  let all: string[] = [];
+  try {
+    const supported = (Intl as { supportedValuesOf?: (k: string) => string[] }).supportedValuesOf;
+    if (supported) all = supported('timeZone');
+  } catch {
+    all = [];
+  }
+  if (all.length === 0) {
+    all = [
+      'America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles',
+      'America/Anchorage', 'Pacific/Honolulu', 'America/Toronto', 'America/Vancouver',
+      'Europe/London', 'Europe/Dublin', 'Europe/Paris', 'Europe/Berlin', 'Europe/Madrid',
+      'Asia/Kolkata', 'Asia/Singapore', 'Asia/Tokyo', 'Asia/Shanghai', 'Asia/Dubai',
+      'Australia/Sydney', 'Australia/Melbourne', 'Pacific/Auckland', 'UTC',
+    ];
+  }
+  return all.includes(current) ? all : [current, ...all];
+}
+
 export function BuildForm({
   limits,
   quota,
@@ -43,6 +76,9 @@ export function BuildForm({
   const [termEndDate, setTermEndDate] = useState('');
   const [meetingDays, setMeetingDays] = useState('');
   const [courseHint, setCourseHint] = useState('');
+  // Resolved on the client, because the server has no idea where the student is.
+  const [timezone, setTimezone] = useState(defaultTimezone);
+  useEffect(() => setTimezone((tz) => detectTimezone(tz)), []);
 
   const [phase, setPhase] = useState<'idle' | 'uploading' | 'working'>('idle');
   const [job, setJob] = useState<JobState | null>(null);
@@ -51,7 +87,8 @@ export function BuildForm({
 
   const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const ids = {
-    text: useId(), term: useId(), start: useId(), end: useId(), days: useId(), course: useId(),
+    text: useId(), term: useId(), start: useId(), end: useId(), days: useId(),
+    course: useId(), zone: useId(),
   };
 
   useEffect(() => () => { if (pollRef.current) clearTimeout(pollRef.current); }, []);
@@ -117,7 +154,7 @@ export function BuildForm({
     if (termEndDate) form.append('termEndDate', termEndDate);
     if (meetingDays.trim()) form.append('meetingDays', meetingDays.trim());
     if (courseHint.trim()) form.append('courseHint', courseHint.trim());
-    form.append('timezone', defaultTimezone);
+    form.append('timezone', timezone);
 
     try {
       const response = await fetch('/api/extract', { method: 'POST', body: form });
@@ -212,6 +249,25 @@ export function BuildForm({
               disabled={busy} className="field" placeholder="MWF, or Tue/Thu"
               aria-describedby={`${ids.days}-hint`} />
             <p id={`${ids.days}-hint`} className="hint mt-1">Used for &ldquo;the second class of week 5&rdquo;.</p>
+          </div>
+          <div className="sm:col-span-2">
+            <label htmlFor={ids.zone} className="label">Your timezone</label>
+            <select
+              id={ids.zone}
+              value={timezone}
+              onChange={(e) => setTimezone(e.target.value)}
+              disabled={busy}
+              className="field"
+              aria-describedby={`${ids.zone}-hint`}
+            >
+              {timezoneOptions(timezone).map((tz) => (
+                <option key={tz} value={tz}>{tz.replace(/_/g, ' ')}</option>
+              ))}
+            </select>
+            <p id={`${ids.zone}-hint`} className="hint mt-1">
+              Deadlines are stored against this, so an 11:59 PM due date stays 11:59 PM even after
+              the clocks change. We detected it from your browser.
+            </p>
           </div>
           <div>
             <label htmlFor={ids.course} className="label">Course name <span className="font-normal text-[var(--color-ink-faint)]">(optional)</span></label>

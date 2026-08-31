@@ -91,6 +91,7 @@ export type ExtractionJobRow = {
   error_message: string | null;
   item_count: number;
   attempts: number;
+  course_hint: string | null;
   created_at: string;
   started_at: string | null;
   finished_at: string | null;
