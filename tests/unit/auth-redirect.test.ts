@@ -80,3 +80,44 @@ describe('the callback only redirects within this app', () => {
     expect(safe(null)).toBe('/input');
   });
 });
+
+describe('callbacks stay on the host the browser is actually using', () => {
+  /**
+   * Mirrors `here()` in src/app/auth/callback/route.ts.
+   *
+   * This exists because of a real incident: NEXT_PUBLIC_SITE_URL was set to a
+   * lookalike domain that belongs to somebody else's Vercel project, so a
+   * successful sign-in ended by redirecting the student to a stranger's site,
+   * which 404'd. The session cookie was fine — it was set on the right host —
+   * but they were no longer on that host to use it.
+   */
+  const here = (requestUrl: string, path: string) => new URL(path, requestUrl).toString();
+
+  it('keeps the student on the domain they signed in from', () => {
+    expect(here('https://syllabus-tool-six.vercel.app/auth/callback?code=x', '/input'))
+      .toBe('https://syllabus-tool-six.vercel.app/input');
+  });
+
+  it('ignores whatever NEXT_PUBLIC_SITE_URL happens to say', () => {
+    // Even a preview deployment or a custom domain lands back on itself.
+    for (const host of [
+      'https://syllabus-tool-git-main-x.vercel.app',
+      'https://schedule.example.edu',
+      'http://localhost:3000',
+    ]) {
+      expect(here(`${host}/auth/callback?code=x`, '/input')).toBe(`${host}/input`);
+    }
+  });
+
+  it('cannot be turned into an open redirect by the next param', () => {
+    // `next` is filtered to same-origin paths before it reaches here, but the
+    // URL constructor is the second line of defence.
+    const out = here('https://syllabus-tool-six.vercel.app/auth/callback', '/schedule');
+    expect(new URL(out).host).toBe('syllabus-tool-six.vercel.app');
+  });
+
+  it('carries error states back to the same host too', () => {
+    expect(here('https://syllabus-tool-six.vercel.app/auth/callback', '/login?error=link_expired'))
+      .toBe('https://syllabus-tool-six.vercel.app/login?error=link_expired');
+  });
+});

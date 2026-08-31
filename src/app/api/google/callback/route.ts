@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { encryptSecret, safeEqual } from '@/lib/crypto';
 import { logger, errorFields } from '@/lib/logger';
-import { siteUrl } from '@/lib/http';
 import { getCurrentUser, createAdminClient } from '@/lib/supabase/server';
 import { exchangeCode, GOOGLE_SCOPE, OAUTH_STATE_COOKIE } from '@/lib/google/calendar';
 
@@ -14,7 +13,11 @@ export const dynamic = 'force-dynamic';
  * query string — a raw JSON error here would strand the student on a blank page.
  */
 export async function GET(request: Request): Promise<NextResponse> {
-  const back = (status: string) => NextResponse.redirect(`${siteUrl()}/schedule?google=${status}`);
+  // Same reasoning as the auth callback: send the student back to the host
+  // they are actually on, so a misconfigured NEXT_PUBLIC_SITE_URL cannot drop
+  // them on another domain holding a fresh session cookie they cannot use.
+  const back = (status: string) =>
+    NextResponse.redirect(new URL(`/schedule?google=${status}`, request.url));
 
   try {
     const url = new URL(request.url);
