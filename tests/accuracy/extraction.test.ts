@@ -158,7 +158,9 @@ suite('extraction accuracy', () => {
           // A dated item may legitimately have no time — that is an all-day
           // deadline, and the common case.
         } else {
-          expect(item.dueTime, `${item.title} has a time but no date`).toBeNull();
+          // A time without a date is fine and worth keeping: the syllabus said
+          // "2:30 PM" but gave nothing we could pin a day to. Discarding it
+          // would make the student retype what the document already told us.
           expect(item.confidence, `${item.title} is undated but not low confidence`).toBe('low');
         }
       }

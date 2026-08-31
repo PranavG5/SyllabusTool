@@ -63,10 +63,11 @@ export async function PATCH(
     if (body.status !== undefined) update.status = body.status;
 
     if (body.dueDate !== undefined) {
+      // The time is kept even when the date is cleared. An item can legitimately
+      // have a stated time and no resolvable day ("Midterm at 2:30 PM", year
+      // unknown); throwing the time away would lose what the syllabus said and
+      // make the student retype it once they fill the date in.
       update.due_date = body.dueDate;
-      // Clearing the date clears the time with it: a time without a day is
-      // not a deadline.
-      if (body.dueDate === null) update.due_time = null;
     }
     if (body.dueTime !== undefined) {
       // Clearing the time turns the item back into an all-day deadline.

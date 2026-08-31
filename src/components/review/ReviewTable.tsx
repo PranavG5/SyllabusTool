@@ -130,7 +130,7 @@ function Row({ item, courses, onChange, onDelete, saving }: RowProps) {
               type="time"
               value={item.dueTime ?? ''}
               onChange={(e) => onChange(item.id, { dueTime: e.target.value || null })}
-              disabled={saving || item.dueDate === null}
+              disabled={saving}
               className="field"
               title="Leave blank for an all-day item"
             />

@@ -312,3 +312,36 @@ describe('long and short spellings converge', () => {
     expect(merged[0]!.dueTime).toBeNull();
   });
 });
+
+describe('a stated time survives an unresolvable date', () => {
+  it('keeps the time when the document gave one but no usable date', () => {
+    // "Midterm at 2:30 PM" with no year anywhere: the date is unresolvable,
+    // but 2:30 PM is real and the student should not have to retype it.
+    const item = normalizeItem(
+      raw({ title: 'Midterm', type: 'exam', due_date: null, due_time: '14:30', relative_reference: null }),
+      CTX,
+    )!;
+    expect(item.dueDate).toBeNull();
+    expect(item.dueTime).toBe('14:30');
+    expect(item.confidence).toBe('low');
+  });
+
+  it('still exports nothing for it, because there is no day to put it on', async () => {
+    const { buildIcs } = await import('@/lib/ics/build');
+    const ics = buildIcs(
+      {
+        term: { id: 't', name: 'Fall 2026', timezone: 'America/New_York', startDate: null, endDate: null },
+        courses: [{ id: 'c1', code: 'HIST 105', name: null, color: '#2563eb', meetingDays: [] }],
+        items: [{
+          id: 'i1', courseId: 'c1', termId: 't', title: 'Midterm', type: 'exam',
+          dueDate: null, dueTime: '14:30', weight: null, location: null,
+          sourceSnippet: 'Midterm at 2:30 PM', sourceUploadId: null, sourceFilename: null,
+          confidence: 'low', status: 'active', revision: 0,
+        }],
+      },
+      { calendarName: 'Fall 2026 — Coursework' },
+      new Date(Date.UTC(2026, 7, 31)),
+    );
+    expect(ics).not.toContain('BEGIN:VEVENT');
+  });
+});
