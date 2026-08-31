@@ -152,16 +152,31 @@ export function isWorkerAuthorized(request: Request): boolean {
   }
 }
 
-/** Fire-and-forget trigger. Failure is survivable: the poll route re-triggers. */
-export function triggerWorker(jobId: string): void {
+/**
+ * Dispatches the worker and waits only for it to acknowledge.
+ *
+ * The worker route answers 202 immediately and does the extraction in its own
+ * `after()`, so this resolves in milliseconds. Awaiting it matters: a
+ * fire-and-forget fetch inside `after()` can be torn down with the invocation
+ * before the request ever leaves, which would leave every job waiting for the
+ * poll route to notice and re-trigger it.
+ *
+ * Failure is still survivable — `maybeRequeue` is the backstop — but it should
+ * be the exception, not the normal path.
+ */
+export async function triggerWorker(jobId: string): Promise<void> {
   const url = `${siteUrl()}/api/jobs/${jobId}/process`;
-  void fetch(url, {
-    method: 'POST',
-    headers: { 'x-job-worker-secret': workerSecret() },
-    // Do not await the body; we only need the request to have been dispatched.
-  }).catch((err) => {
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'x-job-worker-secret': workerSecret() },
+    });
+    if (!response.ok) {
+      logger.warn('jobs.trigger_rejected', { jobId, status: response.status });
+    }
+  } catch (err) {
     logger.warn('jobs.trigger_failed', { jobId, ...errorFields(err) });
-  });
+  }
 }
 
 /**
@@ -169,12 +184,12 @@ export function triggerWorker(jobId: string): void {
  * the poll endpoint, so a dropped trigger self-heals within one poll interval
  * instead of leaving the student staring at a spinner.
  */
-export function maybeRequeue(job: ExtractionJobRow): void {
-  if (job.status !== 'queued') return;
-  if (job.attempts >= MAX_ATTEMPTS) return;
-  if (Date.now() - new Date(job.created_at).getTime() < REQUEUE_AFTER_MS) return;
+export function maybeRequeue(job: ExtractionJobRow): boolean {
+  if (job.status !== 'queued') return false;
+  if (job.attempts >= MAX_ATTEMPTS) return false;
+  if (Date.now() - new Date(job.created_at).getTime() < REQUEUE_AFTER_MS) return false;
   logger.info('jobs.requeue', { jobId: job.id, attempts: job.attempts });
-  triggerWorker(job.id);
+  return true;
 }
 
 // ---------------------------------------------------------------------------

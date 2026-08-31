@@ -127,8 +127,10 @@ export async function POST(request: Request): Promise<NextResponse> {
     });
 
     // Hand off after the response is flushed, so the student is not waiting on
-    // the model. The poll endpoint re-triggers if this never lands.
-    after(() => triggerWorker(jobId));
+    // the model. Awaited, because an unawaited fetch inside after() can be torn
+    // down before it is dispatched. The poll endpoint re-triggers if it still
+    // never lands.
+    after(async () => { await triggerWorker(jobId); });
 
     return json(
       {

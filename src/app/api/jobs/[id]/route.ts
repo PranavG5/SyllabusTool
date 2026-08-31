@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import { AppError } from '@/lib/errors';
+import { after } from 'next/server';
 import { handle, json, requireUser } from '@/lib/http';
 import { createAdminClient } from '@/lib/supabase/server';
-import { maybeRequeue } from '@/lib/jobs';
+import { maybeRequeue, triggerWorker } from '@/lib/jobs';
 import type { JobState } from '@/lib/types';
 
 export const runtime = 'nodejs';
@@ -27,7 +28,7 @@ export async function GET(
     if (!job) throw new AppError('not_found');
 
     // A job whose trigger was dropped restarts itself on the next poll.
-    maybeRequeue(job);
+    if (maybeRequeue(job)) after(() => triggerWorker(job.id));
 
     const state: JobState = {
       id: job.id,

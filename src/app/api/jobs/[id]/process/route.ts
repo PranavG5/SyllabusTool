@@ -1,7 +1,8 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, after } from 'next/server';
 import { handle, json } from '@/lib/http';
 import { isWorkerAuthorized, runJob } from '@/lib/jobs';
 import { AppError } from '@/lib/errors';
+import { logger, errorFields } from '@/lib/logger';
 
 export const runtime = 'nodejs';
 /**
@@ -19,7 +20,20 @@ export async function POST(
     // Internal-only: authenticated by a shared secret, not a user session.
     if (!isWorkerAuthorized(request)) throw new AppError('unauthorized');
     const { id } = await params;
-    await runJob(id);
-    return json({ ok: true });
+
+    // Acknowledge straight away so the caller's `after()` is not holding its
+    // own invocation open for the length of the extraction. The work happens
+    // here, in this invocation's own 300-second budget.
+    after(async () => {
+      try {
+        await runJob(id);
+      } catch (err) {
+        // runJob already records the failure on the job row; this is the
+        // last-resort log for something thrown outside that handling.
+        logger.error('worker.unhandled', { jobId: id, ...errorFields(err) });
+      }
+    });
+
+    return json({ accepted: true }, { status: 202 });
   });
 }
