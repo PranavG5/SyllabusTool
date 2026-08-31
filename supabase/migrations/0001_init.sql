@@ -136,9 +136,11 @@ create table if not exists public.terms (
   id            uuid primary key default extensions.gen_random_uuid(),
   user_id       uuid not null references public.users(id) on delete cascade,
   name          text not null check (length(btrim(name)) between 1 and 120),
-  -- IANA zone. Every deadline is stored as a wall-clock date/time and is
-  -- resolved against this zone at export time, so an 11:59 PM deadline keeps
-  -- meaning 11:59 PM across a DST boundary.
+  -- IANA zone, used only for deadlines that state a time of day. Those are
+  -- stored as wall-clock and resolved against this zone at export, so a
+  -- 7:30 PM exam stays 7:30 PM across a DST boundary. Deadlines that name
+  -- only a day (items.due_time IS NULL) are exported as floating all-day
+  -- events and are deliberately unaffected by this.
   timezone      text not null default 'America/New_York',
   start_date    date,
   end_date      date,

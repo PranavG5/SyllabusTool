@@ -13,3 +13,6 @@ coverage/
 .vercel
 .sentryclirc
 /tests/.tmp/
+
+# Generated deployment secrets — never committed
+.deploy/

@@ -134,6 +134,64 @@ suite('RLS is switched on everywhere', () => {
   });
 });
 
+suite('SECURITY DEFINER functions are not reachable from a browser', () => {
+  /**
+   * Supabase exposes every function in `public` as `/rest/v1/rpc/<name>`, so a
+   * SECURITY DEFINER function with an EXECUTE grant is a direct escalation
+   * path. The trap: `revoke ... from anon, authenticated` does NOT remove the
+   * EXECUTE that PostgreSQL grants to the pseudo-role PUBLIC, which those
+   * roles inherit. Supabase's own advisor caught handle_new_auth_user leaking
+   * that way on the deployed database; this test is why it cannot recur.
+   */
+  const DELIBERATELY_CALLABLE = new Set(['rotate_feed_token']);
+
+  it('exposes no definer function to anon, and only the self-scoped one to authenticated', async () => {
+    const { rows } = await admin.query<{
+      proname: string; secdef: boolean; anon_exec: boolean; auth_exec: boolean;
+    }>(
+      `select p.proname,
+              p.prosecdef as secdef,
+              has_function_privilege('anon', p.oid, 'EXECUTE') as anon_exec,
+              has_function_privilege('authenticated', p.oid, 'EXECUTE') as auth_exec
+         from pg_proc p
+         join pg_namespace n on n.oid = p.pronamespace
+        where n.nspname = 'public'
+        order by p.proname`,
+    );
+
+    expect(rows.length).toBeGreaterThan(5);
+
+    const anonReachable = rows.filter((r) => r.anon_exec).map((r) => r.proname);
+    expect(anonReachable, 'anon can execute these').toEqual([]);
+
+    const authReachable = rows.filter((r) => r.auth_exec).map((r) => r.proname);
+    for (const name of authReachable) {
+      expect(DELIBERATELY_CALLABLE.has(name), `${name} is callable by signed-in users`).toBe(true);
+    }
+  });
+
+  it('keeps every account-scoped helper unreachable by name', async () => {
+    for (const fn of [
+      'consume_extraction_quota', 'consume_rate_limit', 'get_quota_status',
+      'purge_user_data', 'purge_job_text', 'list_expired_uploads',
+      'delete_purged_uploads', 'handle_new_auth_user',
+    ]) {
+      const { rows } = await admin.query<{ anon_exec: boolean; auth_exec: boolean }>(
+        `select has_function_privilege('anon', p.oid, 'EXECUTE') as anon_exec,
+                has_function_privilege('authenticated', p.oid, 'EXECUTE') as auth_exec
+           from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+          where n.nspname = 'public' and p.proname = $1`,
+        [fn],
+      );
+      expect(rows.length, `${fn} is missing`).toBeGreaterThan(0);
+      for (const row of rows) {
+        expect(row.anon_exec, `anon can execute ${fn}`).toBe(false);
+        expect(row.auth_exec, `authenticated can execute ${fn}`).toBe(false);
+      }
+    }
+  });
+});
+
 suite('a user cannot read another user\'s rows', () => {
   it('sees only their own terms', async () => {
     const rows = await asUser(f.alice, (q) => q('select id from public.terms'));
