@@ -29,7 +29,16 @@ function redact(value: unknown, depth = 0): unknown {
   return value;
 }
 
+/**
+ * Silenced under vitest so a passing suite is readable. Set LOG_LEVEL=debug to
+ * see the lines while debugging a test.
+ */
+function silenced(): boolean {
+  return Boolean(process.env.VITEST) && process.env.LOG_LEVEL !== 'debug';
+}
+
 function write(level: Level, event: string, fields: Record<string, unknown> = {}): void {
+  if (silenced()) return;
   const line = JSON.stringify({
     level,
     event,

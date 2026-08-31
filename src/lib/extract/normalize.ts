@@ -52,7 +52,15 @@ export function normalizeCourseCode(raw: string): string {
   return looksLikeCode ? compact.toUpperCase() : cleaned;
 }
 
+/**
+ * Applied in order. Abbreviations expand first, then long forms collapse to a
+ * single spelling, then a couple of phrase-level rules. The point is that
+ * "PS4", "Problem Set 4" and "Problem set #4" all land on the same string, and
+ * so do "Midterm Examination" and "Midterm Exam" — the syllabus and the course
+ * calendar rarely agree on which spelling to use.
+ */
 const TITLE_ABBREVIATIONS: [RegExp, string][] = [
+  // Abbreviations -> full words.
   [/\bp\.?\s?sets?\b/g, 'problem set'],
   [/\bpsets?\b/g, 'problem set'],
   [/\bps\s*(?=\d)/g, 'problem set '],
@@ -64,6 +72,23 @@ const TITLE_ABBREVIATIONS: [RegExp, string][] = [
   [/\blab\s*(?=\d)/g, 'lab '],
   [/\bproj(ect)?\.?\s*(?=\d)/g, 'project '],
   [/\bquiz\s*(?=\d)/g, 'quiz '],
+
+  // Long forms and plurals -> one spelling.
+  [/\bexaminations?\b/g, 'exam'],
+  [/\bexams\b/g, 'exam'],
+  [/\bquizz?es\b/g, 'quiz'],
+  [/\bassignments\b/g, 'assignment'],
+  [/\bproblem sets\b/g, 'problem set'],
+  [/\bpapers\b/g, 'paper'],
+  [/\bessays\b/g, 'essay'],
+  [/\bprojects\b/g, 'project'],
+  [/\breports\b/g, 'report'],
+  [/\bpresentations?\b/g, 'presentation'],
+  [/\bprelims?\b/g, 'prelim'],
+  [/\bmidterms\b/g, 'midterm'],
+
+  // Phrase-level. Runs last so "Final Examination" has already become
+  // "final exam" by the time this collapses it.
   [/\bfinal exam\b/g, 'final'],
 ];
 

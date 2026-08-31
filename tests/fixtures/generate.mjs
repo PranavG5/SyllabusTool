@@ -55,3 +55,11 @@ const pngTmp = join(out, 'canvas.png');
 run([`--screenshot=${pngTmp}`, '--window-size=1000,780', '--hide-scrollbars', pngSrc]);
 renameSync(pngTmp, join(here, 'cases/11-canvas-screenshot.png'));
 console.log('wrote cases/11-canvas-screenshot.png');
+
+// The Word fixture needs no browser — it is assembled from XML parts.
+const { buildDocx } = await import(`file://${resolve(here, '../../scripts/make-docx.mjs')}`);
+void buildDocx;
+execFileSync(process.execPath, [
+  resolve(here, '../../scripts/make-docx.mjs'),
+  join(here, 'cases/12-govt312-word.docx'),
+], { stdio: 'inherit' });

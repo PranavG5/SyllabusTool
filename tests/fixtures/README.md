@@ -1,6 +1,6 @@
 # Extraction fixtures
 
-Eleven real-shaped syllabi. Accuracy on this set is the regression gate for the
+Twelve real-shaped syllabi. Accuracy on this set is the regression gate for the
 extractor: `npm run test:accuracy` scores every case and fails the build when
 recall or precision drops below the floor declared in its `.expected.json`.
 
@@ -17,6 +17,7 @@ recall or precision drops below the floor declared in its `.expected.json`.
 | 09 | `09-chem103-long.txt` | Long document that is mostly policy — a precision test |
 | 10 | `10-arch350-table.pdf` | A **real PDF** whose table extracts as run-together columns |
 | 11 | `11-canvas-screenshot.png` | A **real screenshot** — no text layer, vision path only |
+| 12 | `12-govt312-word.docx` | A **real .docx**, dates written out in full with weekdays |
 
 ## Running
 
@@ -49,8 +50,10 @@ tables, LMS navigation, academic-integrity boilerplate.
 
 ## Regenerating the binary fixtures
 
-`10-arch350-table.pdf` and `11-canvas-screenshot.png` are generated from the
-HTML in `html/` and committed, so the suite needs no browser:
+`10-arch350-table.pdf` and `11-canvas-screenshot.png` are printed from the HTML
+in `html/`; `12-govt312-word.docx` is assembled from XML parts by
+`scripts/make-docx.mjs`, so the archive is reviewable rather than an opaque
+binary. All three are committed, so the suite needs no browser:
 
 ```bash
 node tests/fixtures/generate.mjs   # needs Chromium; CHROME_PATH overrides

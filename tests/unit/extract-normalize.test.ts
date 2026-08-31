@@ -235,3 +235,44 @@ describe('chunking', () => {
     expect(estimateTokens('a'.repeat(4000))).toBe(1000);
   });
 });
+
+describe('long and short spellings converge', () => {
+  // These pairs are what actually appears when a student uploads both the
+  // syllabus and the course calendar for the same class.
+  const pairs: [string, string][] = [
+    ['Midterm Examination', 'Midterm Exam'],
+    ['Final Examination', 'Final Exam'],
+    ['Exam 2', 'Examination 2'],
+    ['Quiz 3', 'Quizzes 3'],
+    ['Problem Sets 4', 'Problem Set 4'],
+    ['Prelim 1', 'Prelims 1'],
+    ['Research Papers', 'Research Paper'],
+    ['Group Presentations', 'Group Presentation'],
+  ];
+
+  it.each(pairs)('treats "%s" and "%s" as the same item', (a, b) => {
+    expect(canonicalTitle(a)).toBe(canonicalTitle(b));
+  });
+
+  it('still keeps genuinely different work apart', () => {
+    expect(canonicalTitle('Midterm Exam')).not.toBe(canonicalTitle('Final Exam'));
+    expect(canonicalTitle('Exam 1')).not.toBe(canonicalTitle('Exam 2'));
+    expect(canonicalTitle('Final Project')).not.toBe(canonicalTitle('Final Exam'));
+    expect(canonicalTitle('Lab Report 1')).not.toBe(canonicalTitle('Lab Report 2'));
+    expect(canonicalTitle('Reading Response')).not.toBe(canonicalTitle('Reading Quiz'));
+  });
+
+  it('dedupes them for real, not just in the canonical form', () => {
+    const items = normalizeItems(
+      [
+        raw({ title: 'Midterm Examination', type: 'exam', due_date: '2026-10-06' }),
+        raw({ title: 'Midterm Exam', type: 'exam', due_date: '2026-10-06', due_time: '14:00', location: 'Sibley 101' }),
+      ],
+      CTX,
+    );
+    const merged = dedupeItems(items);
+    expect(merged).toHaveLength(1);
+    expect(merged[0]!.dueTime).toBe('14:00');
+    expect(merged[0]!.location).toBe('Sibley 101');
+  });
+});

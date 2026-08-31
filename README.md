@@ -80,7 +80,7 @@ self-heals without a queue service to operate.
 
 ```bash
 npm run db:test:up     # throwaway Postgres for the RLS suite (or set TEST_DATABASE_URL)
-npm test               # 140 tests, offline
+npm test               # 219 tests, offline
 npm run verify         # typecheck + unit + RLS
 ```
 
@@ -91,11 +91,20 @@ npm run verify         # typecheck + unit + RLS
 | `tests/unit/datetime.test.ts` | Deadlines survive both DST transitions, in both hemispheres. |
 | `tests/unit/ics.test.ts` | Folding at 75 octets, TEXT escaping, stable UIDs, no duplicate events. |
 | `tests/unit/no-secrets-in-client.test.ts` | No server secret in any client module or built chunk. |
-| `tests/accuracy/extraction.test.ts` | Extraction accuracy on eleven fixtures. **Costs money; opt in.** |
+| `tests/integration/pipeline.test.ts` | Four mixed-format files (a real PDF, a real .docx, a real PNG, pasted text) becoming one merged schedule, with only the model call stubbed. Covers cross-file dedupe, relative-date resolution, chunking, and partial failure. |
+| `tests/accuracy/extraction.test.ts` | Extraction accuracy on twelve fixtures. **Costs money; opt in — see the caveat below.** |
 
 ```bash
 RUN_ACCURACY_TESTS=1 ANTHROPIC_API_KEY=sk-ant-... npm run test:accuracy
 ```
+
+> **This suite has not been run.** It was written against twelve fixtures with
+> per-case recall and precision floors, and its offline parts (parsing, routing,
+> fixture integrity) pass — but no Anthropic API key was available in the
+> environment this was built in, so the model has never actually been called and
+> **extraction accuracy is unmeasured**. Run it and record the baseline before
+> putting this in front of students; expect to tune the floors and the prompt on
+> the first pass.
 
 Two more checks drive a real browser and need the app running
 (`npm run build && npm start`):
