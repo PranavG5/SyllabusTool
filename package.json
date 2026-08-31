@@ -1,0 +1,53 @@
+{
+  "name": "syllabus-tool",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Turn syllabus materials into a semester schedule you can export to any calendar.",
+  "engines": {
+    "node": ">=20.9.0"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:unit": "vitest run tests/unit",
+    "test:rls": "vitest run tests/rls",
+    "test:accuracy": "vitest run tests/accuracy --testTimeout=300000",
+    "db:test:up": "node scripts/local-pg.mjs up",
+    "db:test:down": "node scripts/local-pg.mjs down",
+    "verify": "npm run typecheck && npm run test:unit && npm run test:rls"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.122.0",
+    "@sentry/nextjs": "^10.19.0",
+    "@supabase/ssr": "^0.7.0",
+    "@supabase/supabase-js": "^2.58.0",
+    "clsx": "^2.1.1",
+    "mammoth": "^1.11.0",
+    "next": "^15.5.4",
+    "pdf-parse": "^1.1.1",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "server-only": "^0.0.1",
+    "zod": "^4.5.4"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.14",
+    "@types/node": "^22.18.0",
+    "@types/pg": "^8.15.5",
+    "@types/react": "^19.1.13",
+    "@types/react-dom": "^19.1.9",
+    "dotenv": "^17.2.3",
+    "eslint": "^9.36.0",
+    "eslint-config-next": "^15.5.4",
+    "pg": "^8.16.3",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^4.1.14",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  }
+}

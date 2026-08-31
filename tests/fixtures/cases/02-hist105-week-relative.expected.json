@@ -1,0 +1,27 @@
+{
+  "name": "Week-relative dates only, no calendar dates anywhere",
+  "notes": "Everything must go through relative_reference and be resolved against the term start. Week 1 Monday = 2026-08-24, so Week N Tuesday = Aug 25 + 7(N-1), Week N Thursday = Aug 27 + 7(N-1). The registrar-scheduled final has no resolvable date and must come back dateless rather than guessed.",
+  "context": {
+    "termName": "Fall 2026",
+    "termStart": "2026-08-24",
+    "termEnd": "2026-12-11",
+    "meetingDays": [2, 4],
+    "courseHint": null
+  },
+  "expectedItems": [
+    { "title": "Response Paper 1", "type": "assignment", "course": "HIST 105", "dueDate": "2026-09-03" },
+    { "title": "Map Quiz", "type": "quiz", "course": "HIST 105", "dueDate": "2026-09-15" },
+    { "title": "Midterm Examination", "type": "exam", "course": "HIST 105", "dueDate": "2026-10-01" },
+    { "title": "Response Paper 2", "type": "assignment", "course": "HIST 105", "dueDate": "2026-10-13" },
+    { "title": "Research proposal and annotated bibliography", "type": "assignment", "course": "HIST 105", "dueDate": "2026-10-22", "dueTime": "17:00" },
+    { "title": "Response Paper 3", "type": "assignment", "course": "HIST 105", "dueDate": "2026-11-03" },
+    { "title": "Draft of final essay", "type": "assignment", "course": "HIST 105", "dueDate": "2026-11-19" },
+    { "title": "Final Essay", "type": "assignment", "course": "HIST 105", "dueDate": "2026-12-03" }
+  ],
+  "expectedDatelessItems": [
+    { "title": "Final examination", "course": "HIST 105" }
+  ],
+  "mustNotExtract": ["weekly readings", "white hall"],
+  "minRecall": 0.85,
+  "minPrecision": 0.7
+}

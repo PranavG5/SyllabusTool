@@ -1,0 +1,23 @@
+{
+  "name": "Screenshot of a Canvas assignments page (vision path)",
+  "notes": "A PNG, so there is no text layer at all — this exercises the image branch end to end. Dates and times are only legible visually, the left nav must not become items, and the group headers ('Homework (40% of grade)') are weightings for the group, not deliverables.",
+  "context": {
+    "termName": "Fall 2026",
+    "termStart": "2026-08-24",
+    "termEnd": "2026-12-11",
+    "meetingDays": [],
+    "courseHint": "PHYS 213"
+  },
+  "expectedItems": [
+    { "title": "Homework 5", "type": "assignment", "course": "PHYS 213", "dueDate": "2026-09-18", "dueTime": "23:59" },
+    { "title": "Homework 6", "type": "assignment", "course": "PHYS 213", "dueDate": "2026-10-02", "dueTime": "23:59" },
+    { "title": "Homework 7", "type": "assignment", "course": "PHYS 213", "dueDate": "2026-10-23", "dueTime": "23:59" },
+    { "title": "Midterm Exam 2", "type": "exam", "course": "PHYS 213", "dueDate": "2026-10-29", "dueTime": "20:30" },
+    { "title": "Final Exam", "type": "exam", "course": "PHYS 213", "dueDate": "2026-12-14", "dueTime": "10:30" },
+    { "title": "Pre-lecture Quiz 9", "type": "quiz", "course": "PHYS 213", "dueDate": "2026-11-06", "dueTime": "09:00" },
+    { "title": "Pre-lecture Quiz 10", "type": "quiz", "course": "PHYS 213", "dueDate": "2026-11-13", "dueTime": "09:00" }
+  ],
+  "mustNotExtract": ["announcements", "modules", "discussions", "grades", "syllabus", "files", "home"],
+  "minRecall": 0.85,
+  "minPrecision": 0.8
+}

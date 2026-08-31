@@ -1,0 +1,37 @@
+CS 2110 — Object-Oriented Programming and Data Structures
+Fall 2026 | MWF 10:10–11:00 AM | Gates Hall B01
+
+Instructor: Prof. R. Ellison
+Office hours: Tuesdays 2–4 PM, Gates 431 (no appointment needed)
+
+GRADING
+Problem sets          30%
+Two prelims           30%
+Final project         25%
+Final exam            15%
+
+COURSE SCHEDULE
+
+Week   Date        Topic                          Due
+1      Aug 24      Course intro, Java review      —
+1      Aug 28      Arrays and loops               Problem Set 1 (Fri 11:59pm)
+2      Aug 31      Recursion                      —
+2      Sep 04      Linked lists                   Problem Set 2
+3      Sep 09      Trees                          —
+4      Sep 16      Heaps and priority queues      Problem Set 3
+5      Sep 25      Review                         —
+6      Sep 30      PRELIM 1 (7:30–9:00 PM, Statler Auditorium)
+7      Oct 07      Graphs                         Problem Set 4
+9      Oct 21      Sorting                        Problem Set 5
+10     Oct 28      Hashing                        Project proposal due 5:00 PM
+11     Nov 04      PRELIM 2 (7:30–9:00 PM, Statler Auditorium)
+13     Nov 18      Concurrency                    Problem Set 6
+15     Dec 02      Course wrap-up                 Final project due
+16     Dec 11      —                              FINAL EXAM 9:00 AM, Barton Hall
+
+ACADEMIC INTEGRITY
+All submitted work must be your own. Collaboration on problem sets is permitted
+at the level of discussing approaches; sharing code is not.
+
+LATE POLICY
+Late problem sets lose 20% per day. No late submissions are accepted after 72 hours.

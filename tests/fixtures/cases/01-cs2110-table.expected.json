@@ -1,0 +1,27 @@
+{
+  "name": "Table-formatted schedule with explicit dates",
+  "notes": "The canonical shape: a whitespace-aligned table where the Due column is the only thing that matters. Also carries a grading table that must NOT become items, and policy prose that must not either.",
+  "context": {
+    "termName": "Fall 2026",
+    "termStart": "2026-08-24",
+    "termEnd": "2026-12-11",
+    "meetingDays": [1, 3, 5],
+    "courseHint": null
+  },
+  "expectedItems": [
+    { "title": "Problem Set 1", "type": "assignment", "course": "CS 2110", "dueDate": "2026-08-28", "dueTime": "23:59" },
+    { "title": "Problem Set 2", "type": "assignment", "course": "CS 2110", "dueDate": "2026-09-04" },
+    { "title": "Problem Set 3", "type": "assignment", "course": "CS 2110", "dueDate": "2026-09-16" },
+    { "title": "Prelim 1", "type": "exam", "course": "CS 2110", "dueDate": "2026-09-30" },
+    { "title": "Problem Set 4", "type": "assignment", "course": "CS 2110", "dueDate": "2026-10-07" },
+    { "title": "Problem Set 5", "type": "assignment", "course": "CS 2110", "dueDate": "2026-10-21" },
+    { "title": "Project proposal", "type": "project", "course": "CS 2110", "dueDate": "2026-10-28", "dueTime": "17:00" },
+    { "title": "Prelim 2", "type": "exam", "course": "CS 2110", "dueDate": "2026-11-04" },
+    { "title": "Problem Set 6", "type": "assignment", "course": "CS 2110", "dueDate": "2026-11-18" },
+    { "title": "Final project", "type": "project", "course": "CS 2110", "dueDate": "2026-12-02" },
+    { "title": "Final exam", "type": "exam", "course": "CS 2110", "dueDate": "2026-12-11", "dueTime": "09:00" }
+  ],
+  "mustNotExtract": ["office hours", "academic integrity", "late policy", "two prelims", "java review"],
+  "minRecall": 0.85,
+  "minPrecision": 0.7
+}

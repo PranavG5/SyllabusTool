@@ -1,0 +1,25 @@
+{
+  "name": "Raw Canvas copy/paste, including LMS navigation chrome",
+  "notes": "This is what a student actually pastes. The nav menu, 'Jump to Today', and 'Edit' are UI, not coursework, and must not become items. Canvas labels everything 'Assignment' including the midterm — the type should be corrected from the title.",
+  "context": {
+    "termName": "Fall 2026",
+    "termStart": "2026-08-24",
+    "termEnd": "2026-12-11",
+    "meetingDays": [],
+    "courseHint": null
+  },
+  "expectedItems": [
+    { "title": "Lab Report 1", "type": "assignment", "course": "BIOG 1440", "dueDate": "2026-09-03", "dueTime": "23:59" },
+    { "title": "Lab Report 2", "type": "assignment", "course": "BIOG 1440", "dueDate": "2026-09-17", "dueTime": "23:59" },
+    { "title": "Quiz 1: Membranes", "type": "quiz", "course": "BIOG 1440", "dueDate": "2026-09-29", "dueTime": "23:59" },
+    { "title": "Lab Report 3", "type": "assignment", "course": "BIOG 1440", "dueDate": "2026-10-08", "dueTime": "23:59" },
+    { "title": "Midterm Exam", "type": "exam", "course": "BIOG 1440", "dueDate": "2026-10-14", "dueTime": "20:30" },
+    { "title": "Lab Report 4", "type": "assignment", "course": "BIOG 1440", "dueDate": "2026-10-29", "dueTime": "23:59" },
+    { "title": "Quiz 2: Respiration", "type": "quiz", "course": "BIOG 1440", "dueDate": "2026-11-10", "dueTime": "23:59" },
+    { "title": "Lab Report 5", "type": "assignment", "course": "BIOG 1440", "dueDate": "2026-11-19", "dueTime": "23:59" },
+    { "title": "Final Paper", "type": "assignment", "course": "BIOG 1440", "dueDate": "2026-12-08", "dueTime": "17:00" }
+  ],
+  "mustNotExtract": ["dashboard", "jump to today", "announcements", "modules", "prerequisite", "skip to content", "course summary"],
+  "minRecall": 0.9,
+  "minPrecision": 0.8
+}

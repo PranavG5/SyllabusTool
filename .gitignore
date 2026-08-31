@@ -1,0 +1,15 @@
+node_modules/
+.next/
+out/
+build/
+dist/
+.env
+.env.local
+.env*.local
+*.tsbuildinfo
+next-env.d.ts.bak
+.DS_Store
+coverage/
+.vercel
+.sentryclirc
+/tests/.tmp/

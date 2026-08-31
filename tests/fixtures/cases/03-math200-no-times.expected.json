@@ -1,0 +1,28 @@
+{
+  "name": "Dates with no times at all",
+  "notes": "Nothing here states a clock time, so every item must come back with due_time null from the model and the application must default it to 23:59 with time_is_default true. 'Start of class' is prose, not a parseable time — the extractor must not turn it into 09:05.",
+  "context": {
+    "termName": "Fall 2026",
+    "termStart": "2026-08-24",
+    "termEnd": "2026-12-11",
+    "meetingDays": [1, 3, 5],
+    "courseHint": null
+  },
+  "expectedItems": [
+    { "title": "HW 1", "type": "assignment", "course": "MATH 200", "dueDate": "2026-09-02", "timeIsDefault": true },
+    { "title": "HW 2", "type": "assignment", "course": "MATH 200", "dueDate": "2026-09-09", "timeIsDefault": true },
+    { "title": "HW 3", "type": "assignment", "course": "MATH 200", "dueDate": "2026-09-16", "timeIsDefault": true },
+    { "title": "Exam 1", "type": "exam", "course": "MATH 200", "dueDate": "2026-09-23", "timeIsDefault": true },
+    { "title": "HW 4", "type": "assignment", "course": "MATH 200", "dueDate": "2026-09-30", "timeIsDefault": true },
+    { "title": "HW 5", "type": "assignment", "course": "MATH 200", "dueDate": "2026-10-07", "timeIsDefault": true },
+    { "title": "HW 6", "type": "assignment", "course": "MATH 200", "dueDate": "2026-10-21", "timeIsDefault": true },
+    { "title": "Exam 2", "type": "exam", "course": "MATH 200", "dueDate": "2026-10-28", "timeIsDefault": true },
+    { "title": "HW 7", "type": "assignment", "course": "MATH 200", "dueDate": "2026-11-04", "timeIsDefault": true },
+    { "title": "HW 8", "type": "assignment", "course": "MATH 200", "dueDate": "2026-11-11", "timeIsDefault": true },
+    { "title": "HW 9", "type": "assignment", "course": "MATH 200", "dueDate": "2026-11-18", "timeIsDefault": true },
+    { "title": "Final Exam", "type": "exam", "course": "MATH 200", "dueDate": "2026-12-09", "timeIsDefault": true }
+  ],
+  "mustNotExtract": ["malott 253", "late homework"],
+  "minRecall": 0.9,
+  "minPrecision": 0.8
+}

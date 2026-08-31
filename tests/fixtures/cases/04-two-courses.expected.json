@@ -1,0 +1,29 @@
+{
+  "name": "Two courses in one document",
+  "notes": "Both courses use generic item names ('Final Exam', 'Assignment 1'), so items must be attributed to the right course code or the schedule merges wrongly. Deduplication must NOT collapse the two Final Exams.",
+  "context": {
+    "termName": "Fall 2026",
+    "termStart": "2026-08-24",
+    "termEnd": "2026-12-11",
+    "meetingDays": [],
+    "courseHint": null
+  },
+  "expectedItems": [
+    { "title": "Problem Set A", "type": "assignment", "course": "ECON 101", "dueDate": "2026-09-09" },
+    { "title": "Problem Set B", "type": "assignment", "course": "ECON 101", "dueDate": "2026-09-23" },
+    { "title": "Midterm Exam", "type": "exam", "course": "ECON 101", "dueDate": "2026-10-05" },
+    { "title": "Problem Set C", "type": "assignment", "course": "ECON 101", "dueDate": "2026-10-21" },
+    { "title": "Term Paper", "type": "assignment", "course": "ECON 101", "dueDate": "2026-11-20", "dueTime": "16:00" },
+    { "title": "Final Exam", "type": "exam", "course": "ECON 101", "dueDate": "2026-12-07", "dueTime": "14:00" },
+    { "title": "Assignment 1", "type": "assignment", "course": "ECON 314", "dueDate": "2026-09-10" },
+    { "title": "Assignment 2", "type": "assignment", "course": "ECON 314", "dueDate": "2026-09-24" },
+    { "title": "Prelim", "type": "exam", "course": "ECON 314", "dueDate": "2026-10-15" },
+    { "title": "Assignment 3", "type": "assignment", "course": "ECON 314", "dueDate": "2026-11-05" },
+    { "title": "Empirical Project", "type": "project", "course": "ECON 314", "dueDate": "2026-12-03", "dueTime": "23:59" },
+    { "title": "Final Exam", "type": "exam", "course": "ECON 314", "dueDate": "2026-12-11", "dueTime": "09:00" }
+  ],
+  "requiredCourses": ["ECON 101", "ECON 314"],
+  "mustNotExtract": ["uris hall", "goldwin smith", "grading"],
+  "minRecall": 0.85,
+  "minPrecision": 0.8
+}
