@@ -5,9 +5,13 @@
 -- no `storage` schema, so the whole file no-ops there).
 -- =========================================================================
 
+-- NOTE: superseded by 0006, which adds a post-condition. `to_regclass` was the
+-- wrong probe: it returns NULL both when the object is absent and when the
+-- current role lacks USAGE on its schema, so this silently no-opped in
+-- production while reporting success.
 do $$
 begin
-  if to_regclass('storage.buckets') is null then
+  if not exists (select 1 from pg_namespace where nspname = 'storage') then
     raise notice 'storage schema not present; skipping bucket setup';
     return;
   end if;

@@ -15,6 +15,11 @@
 export interface ClientErrorMessage {
   message: string;
   nextAction?: string;
+  /** Safe, specific cause written by the server. */
+  detail?: string | null;
+  /** Matches the server log line and the X-Error-Reference header. */
+  reference?: string | null;
+  code?: string | null;
 }
 
 export type JsonResult =
@@ -57,6 +62,9 @@ export async function postJson(url: string, payload: unknown): Promise<JsonResul
     body: JSON.stringify(payload),
   });
 
+  // Present even when the body is not ours to parse.
+  const headerReference = response.headers.get('X-Error-Reference');
+  const headerCode = response.headers.get('X-Error-Code');
   const raw = await response.text();
   let parsed: Record<string, unknown> | null = null;
   try {
@@ -69,9 +77,25 @@ export async function postJson(url: string, payload: unknown): Promise<JsonResul
     // Our own routes always answer with { error: { message, nextAction } }.
     const envelope = parsed?.error as ClientErrorMessage | undefined;
     if (envelope?.message) {
-      return { ok: false, error: { message: envelope.message, nextAction: envelope.nextAction } };
+      return {
+        ok: false,
+        error: {
+          message: envelope.message,
+          nextAction: envelope.nextAction,
+          detail: envelope.detail ?? null,
+          reference: envelope.reference ?? headerReference,
+          code: envelope.code ?? headerCode,
+        },
+      };
     }
-    return { ok: false, error: platformError(response.status, raw) };
+    return {
+      ok: false,
+      error: {
+        ...platformError(response.status, raw),
+        reference: headerReference,
+        code: headerCode ?? `http_${response.status}`,
+      },
+    };
   }
 
   if (!parsed) {

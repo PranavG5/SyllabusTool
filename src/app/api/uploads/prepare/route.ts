@@ -87,8 +87,29 @@ export async function POST(request: Request): Promise<NextResponse> {
         .createSignedUploadUrl(path);
 
       if (error || !data) {
-        logger.error('uploads.sign_failed', { message: error?.message });
-        throw new AppError('storage_failed');
+        // Distinguish "this deployment was never finished" from "storage hiccup".
+        // The first is a setup problem no amount of retrying fixes, and it is
+        // exactly what happened here: a migration guard silently skipped
+        // creating the bucket, and every upload failed with a generic message.
+        const raw = (error?.message ?? '').toLowerCase();
+        logger.error('uploads.sign_failed', { message: error?.message, path });
+
+        if (raw.includes('bucket') && (raw.includes('not found') || raw.includes('does not exist'))) {
+          throw new AppError('storage_not_configured', {
+            detail: `The "${STORAGE_BUCKET}" storage bucket does not exist on this project.`,
+            cause: error,
+          });
+        }
+        if (raw.includes('jwt') || raw.includes('unauthorized') || raw.includes('invalid signature')) {
+          throw new AppError('storage_failed', {
+            detail: 'Storage rejected our credentials — SUPABASE_SERVICE_ROLE_KEY looks wrong.',
+            cause: error,
+          });
+        }
+        throw new AppError('storage_failed', {
+          detail: error?.message ? `Storage said: ${error.message.slice(0, 120)}` : 'Storage gave no reason.',
+          cause: error,
+        });
       }
 
       targets.push({

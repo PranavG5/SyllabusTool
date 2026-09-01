@@ -19,6 +19,11 @@ export type ErrorCode =
   | 'empty_document'
   | 'quota_exceeded'
   | 'rate_limited'
+  | 'storage_not_configured'
+  | 'storage_upload_failed'
+  | 'storage_object_missing'
+  | 'model_not_configured'
+  | 'database_unavailable'
   | 'model_unavailable'
   | 'extraction_failed'
   | 'storage_failed'
@@ -118,6 +123,31 @@ const CATALOG: Record<ErrorCode, ErrorShape> = {
     message: 'We could not save your upload.',
     nextAction: 'Try again in a moment.',
   },
+  storage_not_configured: {
+    status: 503,
+    message: 'File uploads are not switched on for this deployment yet.',
+    nextAction: 'Paste your syllabus text instead — that path works. (Admin: the private storage bucket is missing.)',
+  },
+  storage_upload_failed: {
+    status: 502,
+    message: "Your file didn't finish uploading.",
+    nextAction: 'Check your connection and try again, or remove that file and paste its text.',
+  },
+  storage_object_missing: {
+    status: 404,
+    message: "We could not find that file where it was uploaded.",
+    nextAction: 'Upload it again.',
+  },
+  model_not_configured: {
+    status: 503,
+    message: 'Extraction is not switched on for this deployment yet.',
+    nextAction: 'Nothing you entered was lost. (Admin: ANTHROPIC_API_KEY is not set.)',
+  },
+  database_unavailable: {
+    status: 503,
+    message: 'We could not reach our database.',
+    nextAction: 'Try again in a moment — this is usually brief.',
+  },
   calendar_not_connected: {
     status: 400,
     message: 'No Google Calendar is connected to this account yet.',
@@ -141,6 +171,15 @@ export class AppError extends Error {
   /** Shown verbatim to the user. Never contains internals. */
   readonly userMessage: string;
   readonly nextAction: string;
+  /**
+   * A short, deliberately safe phrase naming the specific cause, shown to the
+   * user beneath the message. This is what makes a failure diagnosable without
+   * reading server logs — "the storage bucket is missing" tells you far more
+   * than "we could not save your upload" — so it must never carry a stack
+   * trace, a connection string, a key, or anything from an upstream error
+   * body. Put those in `context`, which stays server-side.
+   */
+  readonly detail: string | null;
   /** Extra context for logs only — never serialised to the client. */
   readonly context: Record<string, unknown>;
 
@@ -150,6 +189,7 @@ export class AppError extends Error {
       /** Overrides the catalog message when a specific one reads better. */
       userMessage?: string;
       nextAction?: string;
+      detail?: string;
       cause?: unknown;
       context?: Record<string, unknown>;
     } = {},
@@ -161,30 +201,71 @@ export class AppError extends Error {
     this.status = shape.status;
     this.userMessage = options.userMessage ?? shape.message;
     this.nextAction = options.nextAction ?? shape.nextAction;
+    this.detail = options.detail ?? null;
     this.context = options.context ?? {};
   }
 }
 
 export interface ClientError {
-  error: { code: ErrorCode; message: string; nextAction: string };
+  error: {
+    code: ErrorCode;
+    message: string;
+    nextAction: string;
+    /** Safe, specific cause. Null when there is nothing more to say. */
+    detail: string | null;
+    /** Correlates this response with the server log line for the same failure. */
+    reference: string;
+  };
 }
 
 /**
  * Converts anything thrown into a safe client payload. Unknown throwables
  * collapse to `internal` — a stack trace or driver message never escapes.
+ *
+ * `reference` is echoed into the log line for the same request, so a screenshot
+ * of the error is enough to find the exact failure in the logs.
  */
-export function toClientError(err: unknown): { status: number; body: ClientError } {
+export function toClientError(err: unknown, reference = newReference()): {
+  status: number;
+  body: ClientError;
+} {
   if (err instanceof AppError) {
     return {
       status: err.status,
-      body: { error: { code: err.code, message: err.userMessage, nextAction: err.nextAction } },
+      body: {
+        error: {
+          code: err.code,
+          message: err.userMessage,
+          nextAction: err.nextAction,
+          detail: err.detail,
+          reference,
+        },
+      },
     };
   }
   const shape = CATALOG.internal;
   return {
     status: shape.status,
-    body: { error: { code: 'internal', message: shape.message, nextAction: shape.nextAction } },
+    body: {
+      error: {
+        code: 'internal',
+        message: shape.message,
+        nextAction: shape.nextAction,
+        detail: null,
+        reference,
+      },
+    },
   };
+}
+
+/** Short, human-readable, unambiguous when read aloud off a screenshot. */
+export function newReference(): string {
+  const alphabet = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+  let out = '';
+  for (let i = 0; i < 6; i += 1) {
+    out += alphabet[Math.floor(Math.random() * alphabet.length)];
+  }
+  return out;
 }
 
 export function errorMessage(code: ErrorCode): string {

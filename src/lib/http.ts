@@ -7,7 +7,7 @@ import 'server-only';
  */
 
 import { NextResponse } from 'next/server';
-import { AppError, toClientError } from '@/lib/errors';
+import { AppError, toClientError, newReference } from '@/lib/errors';
 import { logger, errorFields } from '@/lib/logger';
 import { getCurrentUser, type AuthedUser } from '@/lib/supabase/server';
 
@@ -25,17 +25,26 @@ export async function handle(
     logger.info('http.ok', { route, status: response.status, durationMs: Date.now() - started });
     return response;
   } catch (err) {
-    const { status, body } = toClientError(err);
+    // One reference id shared by the response and the log line, so a
+    // screenshot of the error is enough to find the exact failure.
+    const reference = newReference();
+    const { status, body } = toClientError(err, reference);
     const level = status >= 500 ? 'error' : 'warn';
     logger[level]('http.error', {
       route,
       status,
+      reference,
       code: body.error.code,
+      detail: body.error.detail,
       durationMs: Date.now() - started,
       ...errorFields(err),
       ...(err instanceof AppError ? { context: err.context } : {}),
     });
-    return NextResponse.json(body, { status });
+    return NextResponse.json(body, {
+      status,
+      // Readable in the browser's network tab without expanding the body.
+      headers: { 'X-Error-Reference': reference, 'X-Error-Code': body.error.code },
+    });
   }
 }
 

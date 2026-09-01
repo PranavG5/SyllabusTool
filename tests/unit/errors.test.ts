@@ -54,3 +54,52 @@ describe('error serialisation', () => {
     expect(body.error.nextAction.length).toBeGreaterThan(10);
   });
 });
+
+describe('diagnostic fields stay safe', () => {
+  it('includes a code, a detail and a reference for the client', () => {
+    const { body } = toClientError(
+      new AppError('storage_not_configured', {
+        detail: 'The "syllabi" storage bucket does not exist on this project.',
+      }),
+      'K7M2QP',
+    );
+    expect(body.error.code).toBe('storage_not_configured');
+    expect(body.error.detail).toMatch(/bucket does not exist/);
+    expect(body.error.reference).toBe('K7M2QP');
+  });
+
+  it('still refuses to serialise the cause or the log context', () => {
+    const cause = new Error('connect ECONNREFUSED 10.0.0.5:5432');
+    const app = new AppError('database_unavailable', {
+      detail: 'The database did not answer.',
+      cause,
+      context: { dsn: 'postgres://user:pw@host/db', serviceKey: 'sb_secret_abc123' },
+    });
+    const serialised = JSON.stringify(toClientError(app).body);
+    expect(serialised).toContain('The database did not answer.');
+    for (const secret of ['ECONNREFUSED', '10.0.0.5', 'postgres://', 'sb_secret_abc123', 'at ']) {
+      expect(serialised, `leaked ${secret}`).not.toContain(secret);
+    }
+  });
+
+  it('leaves detail null when nothing specific is known', () => {
+    expect(toClientError(new AppError('internal')).body.error.detail).toBeNull();
+    expect(toClientError(new Error('boom')).body.error.detail).toBeNull();
+  });
+
+  it('generates a distinct, readable reference each time', () => {
+    const refs = new Set(Array.from({ length: 200 }, () => toClientError(new AppError('internal')).body.error.reference));
+    expect(refs.size).toBeGreaterThan(190);
+    for (const ref of refs) {
+      expect(ref).toMatch(/^[2-9A-HJ-NP-Z]{6}$/); // no 0/O/1/I to misread aloud
+    }
+  });
+
+  it('gives the new setup-failure codes an actionable next step', () => {
+    for (const code of ['storage_not_configured', 'model_not_configured', 'database_unavailable'] as const) {
+      const { body } = toClientError(new AppError(code));
+      expect(body.error.message.length, code).toBeGreaterThan(10);
+      expect(body.error.nextAction.length, code).toBeGreaterThan(10);
+    }
+  });
+});

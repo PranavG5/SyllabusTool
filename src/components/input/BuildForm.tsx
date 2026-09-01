@@ -4,7 +4,7 @@ import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { FileDrop, type PickedFile } from './FileDrop';
 import { ErrorNotice } from '@/components/ErrorNotice';
-import { postJson } from '@/lib/client-fetch';
+import { postJson, type ClientErrorMessage } from '@/lib/client-fetch';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import type { JobState } from '@/lib/types';
 
@@ -84,7 +84,7 @@ export function BuildForm({
 
   const [phase, setPhase] = useState<'idle' | 'uploading' | 'working'>('idle');
   const [job, setJob] = useState<JobState | null>(null);
-  const [error, setError] = useState<{ message: string; nextAction?: string } | null>(null);
+  const [error, setError] = useState<ClientErrorMessage | null>(null);
   const [rejected, setRejected] = useState<{ filename: string; reason: string }[]>([]);
   const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number; name: string } | null>(null);
 
@@ -196,9 +196,14 @@ export function BuildForm({
           if (uploadError) {
             setPhase('idle');
             setUploadProgress(null);
+            // Storage's own reason is the useful part — "mime type not
+            // supported", "exceeded maximum size", "bucket not found" each
+            // need a different response from the student.
             setError({
               message: `We couldn't upload "${picked.file.name}".`,
-              nextAction: 'Check your connection and try again, or remove that file.',
+              nextAction: 'Check your connection and try again, or remove that file and paste its text instead.',
+              detail: uploadError.message ? `Storage said: ${uploadError.message.slice(0, 160)}` : null,
+              code: 'storage_upload_failed',
             });
             return;
           }
@@ -350,7 +355,15 @@ export function BuildForm({
         </div>
       </section>
 
-      {error ? <ErrorNotice message={error.message} nextAction={error.nextAction} /> : null}
+      {error ? (
+        <ErrorNotice
+          message={error.message}
+          nextAction={error.nextAction}
+          detail={error.detail}
+          reference={error.reference}
+          code={error.code}
+        />
+      ) : null}
 
       {rejected.length > 0 ? (
         <div role="alert" className="card border-[var(--color-flag-line)] bg-[var(--color-flag-soft)] p-4">

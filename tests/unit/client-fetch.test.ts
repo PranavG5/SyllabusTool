@@ -13,7 +13,12 @@ import { postJson } from '@/lib/client-fetch';
 function mockFetch(status: number, body: string, ok = status < 400) {
   vi.stubGlobal(
     'fetch',
-    vi.fn(async () => ({ ok, status, text: async () => body })) as unknown as typeof fetch,
+    vi.fn(async () => ({
+      ok,
+      status,
+      headers: { get: () => null },
+      text: async () => body,
+    })) as unknown as typeof fetch,
   );
 }
 
@@ -100,5 +105,53 @@ describe('a 2xx that is not JSON', () => {
     const result = await postJson('/api/extract', {});
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error.message).toMatch(/unexpected reply/i);
+  });
+});
+
+describe('diagnostic detail survives the round trip', () => {
+  it('keeps the server detail, reference and code', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: false,
+        status: 503,
+        headers: { get: (h: string) => (h === 'X-Error-Reference' ? 'K7M2QP' : 'storage_not_configured') },
+        text: async () =>
+          JSON.stringify({
+            error: {
+              code: 'storage_not_configured',
+              message: 'File uploads are not switched on for this deployment yet.',
+              nextAction: 'Paste your syllabus text instead.',
+              detail: 'The "syllabi" storage bucket does not exist on this project.',
+              reference: 'K7M2QP',
+            },
+          }),
+      })) as unknown as typeof fetch,
+    );
+    const result = await postJson('/api/uploads/prepare', {});
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.detail).toMatch(/bucket does not exist/);
+      expect(result.error.reference).toBe('K7M2QP');
+      expect(result.error.code).toBe('storage_not_configured');
+    }
+  });
+
+  it('falls back to the headers when the body is not ours', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: false,
+        status: 413,
+        headers: { get: (h: string) => (h === 'X-Error-Reference' ? 'ABC123' : null) },
+        text: async () => 'Request Entity Too Large',
+      })) as unknown as typeof fetch,
+    );
+    const result = await postJson('/api/extract', {});
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.reference).toBe('ABC123');
+      expect(result.error.code).toBe('http_413');
+    }
   });
 });
