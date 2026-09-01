@@ -74,6 +74,39 @@ Two of these you have to fetch yourself:
 URLs and the Google OAuth redirect, so a wrong value produces feed links that
 point at the wrong host.
 
+### Start every diagnosis here
+
+```bash
+curl -s https://syllabus-tool-six.vercel.app/api/health | jq
+```
+
+It checks each dependency and names whichever is broken — env vars, the
+encryption key's byte length, database reachability, and whether the private
+storage bucket exists and is actually private. It reports status only, never a
+value, so it is safe to hit from anywhere and safe to paste into a bug report.
+`200` means everything works; `503` lists the failures.
+
+Two outages here would have been a single call: a missing storage bucket, and a
+misconfigured site URL.
+
+Every error response also carries a six-character reference in the body and in
+the `X-Error-Reference` header, echoed into the matching server log line. If a
+student sends a screenshot, search the Vercel logs for that reference to find
+the exact request.
+
+### Troubleshooting: uploads fail with "we could not save your upload"
+
+The private `syllabi` bucket is missing. Check with `/api/health`, then re-run
+migration `0006_storage_bucket_verified.sql`, which creates the bucket and its
+policies and **raises** if it did not.
+
+This is worth knowing about because of how it originally failed: migration 0004
+guarded its work with `to_regclass('storage.buckets') is null`, which returns
+NULL both when the object is absent and when the role lacks USAGE on the
+schema. On production it was the second, so the migration reported success
+having created nothing. 0006 detects Supabase via `pg_namespace` instead, which
+every role can read, and asserts the bucket exists before it finishes.
+
 ### Troubleshooting: the confirmation link 404s on a lookalike domain
 
 Symptom: clicking the email link lands on `syllabus-tool.vercel.app/input`

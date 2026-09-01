@@ -77,6 +77,17 @@ self-heals without a queue service to operate.
 | Quota | `supabase/migrations/0002_functions.sql` | One SQL function under a per-user advisory lock. A paid tier is a row in `plan_limits`. |
 | Tenant isolation | `supabase/migrations/0003_rls.sql` | Postgres policies plus column-level grants, not application `WHERE` clauses. |
 
+## Diagnosing a broken deployment
+
+```bash
+curl -s https://<your-domain>/api/health | jq
+```
+
+Names whichever dependency is broken rather than leaving you to infer it from a
+vague user-facing message. Status only, never values — safe to paste into a bug
+report. Every error response also carries a six-character reference echoed into
+the server log line, so a screenshot is enough to find the exact request.
+
 ## Tests
 
 ```bash
