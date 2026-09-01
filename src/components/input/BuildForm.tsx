@@ -4,6 +4,8 @@ import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { FileDrop, type PickedFile } from './FileDrop';
 import { ErrorNotice } from '@/components/ErrorNotice';
+import { postJson } from '@/lib/client-fetch';
+import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import type { JobState } from '@/lib/types';
 
 /**
@@ -84,6 +86,7 @@ export function BuildForm({
   const [job, setJob] = useState<JobState | null>(null);
   const [error, setError] = useState<{ message: string; nextAction?: string } | null>(null);
   const [rejected, setRejected] = useState<{ filename: string; reason: string }[]>([]);
+  const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number; name: string } | null>(null);
 
   const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const ids = {
@@ -146,33 +149,100 @@ export function BuildForm({
     setRejected([]);
     setPhase('uploading');
 
-    const form = new FormData();
-    for (const picked of files) form.append('files', picked.file);
-    if (text.trim()) form.append('text', text.trim());
-    form.append('termName', termName.trim() || 'My term');
-    if (termStartDate) form.append('termStartDate', termStartDate);
-    if (termEndDate) form.append('termEndDate', termEndDate);
-    if (meetingDays.trim()) form.append('meetingDays', meetingDays.trim());
-    if (courseHint.trim()) form.append('courseHint', courseHint.trim());
-    form.append('timezone', timezone);
-
     try {
-      const response = await fetch('/api/extract', { method: 'POST', body: form });
-      const body = await response.json();
-      if (!response.ok) {
+      /**
+       * Files go straight from the browser into the private bucket using
+       * one-time signed URLs. They never pass through our own API, because a
+       * serverless function rejects any request body over 4.5 MB — far below
+       * the limits this form advertises. Only the resulting ids are posted.
+       */
+      let batchId: string | null = null;
+      let uploaded: {
+        uploadId: string; filename: string; mimeType: string; sizeBytes: number; path: string;
+      }[] = [];
+
+      if (files.length > 0) {
+        const prepared = await postJson('/api/uploads/prepare', {
+          files: files.map((f) => ({
+            filename: f.file.name,
+            sizeBytes: f.file.size,
+            mimeType: f.file.type || 'application/octet-stream',
+          })),
+        });
+        if (!prepared.ok) {
+          setPhase('idle');
+          setError(prepared.error);
+          return;
+        }
+
+        batchId = prepared.data.batchId as string;
+        const targets = prepared.data.targets as {
+          uploadId: string; filename: string; mimeType: string; sizeBytes: number;
+          path: string; token: string;
+        }[];
+
+        const supabase = getSupabaseBrowserClient();
+        for (let i = 0; i < targets.length; i += 1) {
+          const target = targets[i]!;
+          const picked = files[i]!;
+          setUploadProgress({ done: i, total: targets.length, name: picked.file.name });
+
+          const { error: uploadError } = await supabase.storage
+            .from('syllabi')
+            .uploadToSignedUrl(target.path, target.token, picked.file, {
+              contentType: target.mimeType,
+            });
+
+          if (uploadError) {
+            setPhase('idle');
+            setUploadProgress(null);
+            setError({
+              message: `We couldn't upload "${picked.file.name}".`,
+              nextAction: 'Check your connection and try again, or remove that file.',
+            });
+            return;
+          }
+          uploaded.push({
+            uploadId: target.uploadId,
+            filename: target.filename,
+            mimeType: target.mimeType,
+            sizeBytes: target.sizeBytes,
+            path: target.path,
+          });
+        }
+        setUploadProgress(null);
+      }
+
+      const started = await postJson('/api/extract', {
+        batchId,
+        uploads: uploaded,
+        text: text.trim() || null,
+        courseHint: courseHint.trim() || null,
+        termName: termName.trim() || 'My term',
+        termStartDate: termStartDate || null,
+        termEndDate: termEndDate || null,
+        meetingDays: meetingDays.trim() || null,
+        timezone,
+      });
+
+      if (!started.ok) {
         setPhase('idle');
-        setError({ message: body?.error?.message ?? 'That did not work.', nextAction: body?.error?.nextAction });
+        setError(started.error);
         return;
       }
-      setRejected(body.rejectedFiles ?? []);
+
+      const body = started.data;
+      setRejected((body.rejectedFiles ?? []) as { filename: string; reason: string }[]);
       setPhase('working');
       setJob({
-        id: body.jobId, status: 'queued', totalFiles: body.totalFiles,
-        processedFiles: 0, itemCount: 0, fileErrors: [], errorMessage: null, termId: body.termId,
+        id: body.jobId as string, status: 'queued', totalFiles: body.totalFiles as number,
+        processedFiles: 0, itemCount: 0, fileErrors: [], errorMessage: null,
+        termId: (body.termId as string) ?? null,
       });
-      poll(body.jobId, Date.now() + POLL_TIMEOUT_MS);
+      poll(body.jobId as string, Date.now() + POLL_TIMEOUT_MS);
     } catch {
       setPhase('idle');
+      setUploadProgress(null);
       setError({ message: 'We could not reach the server.', nextAction: 'Check your connection and try again.' });
     }
   }
@@ -299,15 +369,23 @@ export function BuildForm({
 
       <div className="flex flex-wrap items-center gap-4">
         <button type="submit" disabled={!canSubmit} className="btn btn-primary">
-          {phase === 'uploading' ? 'Uploading…' : phase === 'working' ? 'Reading…' : 'Build my schedule'}
+          {phase === 'uploading'
+            ? uploadProgress
+              ? `Uploading ${uploadProgress.done + 1}/${uploadProgress.total}…`
+              : 'Uploading…'
+            : phase === 'working'
+              ? 'Reading…'
+              : 'Build my schedule'}
         </button>
 
         <p role="status" aria-live="polite" className="hint">
-          {phase === 'working' && job
-            ? `Reading ${job.totalFiles} source${job.totalFiles === 1 ? '' : 's'}. This usually takes under a minute.`
-            : quota.remaining > 0
-              ? `${quota.remaining} of ${quota.limit} builds left this month.`
-              : "You've used all of this month's builds. Your existing schedule is still editable."}
+          {uploadProgress
+            ? `Uploading ${uploadProgress.name} (${uploadProgress.done + 1} of ${uploadProgress.total})…`
+            : phase === 'working' && job
+              ? `Reading ${job.totalFiles} source${job.totalFiles === 1 ? '' : 's'}. This usually takes under a minute.`
+              : quota.remaining > 0
+                ? `${quota.remaining} of ${quota.limit} builds left this month.`
+                : "You've used all of this month's builds. Your existing schedule is still editable."}
         </p>
       </div>
     </form>

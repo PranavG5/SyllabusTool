@@ -32,13 +32,19 @@ const MAX_ATTEMPTS = 3;
 export interface CreateJobInput {
   userId: string;
   termId: string;
+  /**
+   * Files already living in the private bucket. The browser uploaded them
+   * directly with a signed URL, so their bytes never passed through a
+   * serverless function and its 4.5 MB request limit.
+   */
   files: {
+    uploadId: string;
     filename: string;
     mimeType: string;
     sizeBytes: number;
     pageCount: number | null;
     parsed: ParsedFile;
-    bytes: Uint8Array;
+    storagePath: string;
   }[];
   pastedText: string | null;
   courseHint: string | null;
@@ -73,25 +79,14 @@ export async function createJob(input: CreateJobInput): Promise<CreatedJob> {
   const uploadIds: string[] = [];
 
   for (const file of input.files) {
-    const uploadId = randomUUID();
-    const storagePath = `${input.userId}/${jobId}/${uploadId}-${sanitizeFilename(file.filename)}`;
-
-    // The original goes to a private bucket. Reads always use a short-lived
-    // signed URL; the bucket has no public access and rows are purged after 30
-    // days by the retention job.
-    const { error: uploadError } = await supabase.storage
-      .from(STORAGE_BUCKET)
-      .upload(storagePath, file.bytes, { contentType: file.mimeType, upsert: false });
-
-    if (uploadError) {
-      logger.warn('jobs.storage_upload_failed', { filename: file.filename, message: uploadError.message });
-    }
-
+    // The object is already in the private bucket. Reads go through a
+    // short-lived signed URL; the bucket has no public access, and the
+    // retention job removes both object and row after 30 days.
     const { error } = await supabase.from('uploads').insert({
-      id: uploadId,
+      id: file.uploadId,
       user_id: input.userId,
       job_id: jobId,
-      storage_path: uploadError ? null : storagePath,
+      storage_path: file.storagePath,
       filename: file.filename,
       mime_type: file.mimeType,
       size_bytes: file.sizeBytes,
@@ -104,7 +99,7 @@ export async function createJob(input: CreateJobInput): Promise<CreatedJob> {
       logger.error('jobs.upload_row_failed', { message: error.message });
       throw new AppError('internal', { context: { reason: 'could not record upload' } });
     }
-    uploadIds.push(uploadId);
+    uploadIds.push(file.uploadId);
   }
 
   if (input.pastedText) {
@@ -126,10 +121,6 @@ export async function createJob(input: CreateJobInput): Promise<CreatedJob> {
 
   logger.info('jobs.created', { jobId, userId: input.userId, files: input.files.length });
   return { jobId, uploadIds };
-}
-
-function sanitizeFilename(name: string): string {
-  return name.replace(/[^A-Za-z0-9._-]/g, '_').slice(0, 120) || 'file';
 }
 
 // ---------------------------------------------------------------------------
